@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Data Center as a Computer (4th Ed.) — 16:9 技術簡報</title>
+  <style>
+    :root {
+      --bg-stage: #f4efe6;
+      --bg-slide: #fffdf9;
+      --text-main: #292524;
+      --text-muted: #57534e;
+      --border-soft: #efe5d5;
+      --orange: #ea580c;
+      --orange-bg: #fff7ed;
+      --orange-bd: #fed7aa;
+      --green: #15803d;
+      --green-bg: #f0fdf4;
+      --green-bd: #bbf7d0;
+      --pink: #be185d;
+      --pink-bg: #fdf2f8;
+      --pink-bd: #fbcfe8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", "Segoe UI", sans-serif;
+      background: var(--bg-stage);
+      color: var(--text-main);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 20px 64px;
+      user-select: text;
+    }
+
+    /* ===== Native MathML Styling (Zero-CDN, Offline-proof) ===== */
+    math {
+      font-family: "STIX Two Math", "Cambria Math", "Latin Modern Math", "Times New Roman", serif;
+      font-size: 1.08em;
+      color: #1c1917;
+    }
+    math[display="block"] {
+      display: block;
+      text-align: center;
+      margin: 6px 0;
+      font-size: 1.18em;
+    }
+
+    /* ===== 16:9 Slide Deck Container ===== */
+    .deck {
+      width: min(1140px, 96vw, calc((100vh - 88px) * 16 / 9));
+      aspect-ratio: 16 / 9;
+      position: relative;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-slide);
+      border: 2px solid var(--border-soft);
+      border-radius: 22px;
+      padding: 28px 36px 22px;
+      box-shadow: 0 18px 44px rgba(41, 37, 36, 0.10);
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+    .slide.active {
+      display: flex;
+      animation: fadeSlide 0.18s ease-out;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0.4; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      position: relative;
+      z-index: 2;
+    }
+    .badge {
+      display: inline-block;
+      background: #ffedd5;
+      color: #c2410c;
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 4px 11px;
+      border-radius: 999px;
+    }
+    .badge.green { background: #dcfce7; color: #15803d; }
+    .badge.pink { background: #fce7f3; color: #be185d; }
+    .slide-idx {
+      font-family: ui-monospace, monospace;
+      font-size: 0.78rem;
+      color: #78716c;
+    }
+
+    h2 {
+      font-size: clamp(1.3rem, 2.2vw, 1.78rem);
+      line-height: 1.24;
+      color: #1c1917;
+      margin-bottom: 6px;
+    }
+    .lead {
+      font-size: clamp(0.82rem, 1.15vw, 0.94rem);
+      line-height: 1.48;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 11px;
+      position: relative;
+      z-index: 2;
+      min-height: 0;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .grid-split { display: grid; grid-template-columns: 1.35fr 0.88fr; gap: 18px; align-items: center; }
+
+    .bento-card {
+      background: var(--orange-bg);
+      border: 1px solid var(--orange-bd);
+      border-radius: 14px;
+      padding: 13px 15px;
+    }
+    .bento-card.green { background: var(--green-bg); border-color: var(--green-bd); }
+    .bento-card.pink { background: var(--pink-bg); border-color: var(--pink-bd); }
+    .bento-card.neutral { background: #faf8f5; border-color: #e7e0d3; }
+
+    .bento-card h3 { font-size: 0.9rem; color: #1c1917; margin-bottom: 5px; }
+    .bento-card p, .bento-card li { font-size: 0.82rem; line-height: 1.45; color: #44403c; }
+    .bento-card ul { padding-left: 16px; display: grid; gap: 3px; }
+
+    .kpi { font-size: 1.45rem; font-weight: 800; color: var(--orange); margin-bottom: 2px; }
+    .bento-card.green .kpi { color: var(--green); }
+    .bento-card.pink .kpi { color: var(--pink); }
+
+    .formula-box {
+      background: var(--green-bg);
+      border: 1px solid var(--green-bd);
+      border-left: 5px solid #22c55e;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 0.92rem;
+    }
+    .formula-box.orange { background: var(--orange-bg); border-color: var(--orange-bd); border-left-color: #f97316; }
+    .formula-box.pink { background: var(--pink-bg); border-color: var(--pink-bd); border-left-color: #ec4899; }
+    .formula-label { font-size: 0.74rem; font-weight: 700; color: #57534e; margin-bottom: 4px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-soft);
+    }
+    th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid #f1ebe0; }
+    th { background: #fff7ed; color: #9a3412; font-weight: 700; }
+    tr:last-child td { border-bottom: none; }
+
+    .wikilink {
+      font-family: ui-monospace, monospace;
+      font-size: 0.74rem;
+      background: #f5efe4;
+      color: #7c2d12;
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-weight: 600;
+    }
+
+    .slide-foot {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-soft);
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.74rem;
+      color: #78716c;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ===== Seamless Stickers ===== */
+    .corner-sticker {
+      position: absolute;
+      right: 16px;
+      bottom: 30px;
+      width: 162px;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.94;
+    }
+    .corner-sticker img, .inline-sticker img {
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+      -webkit-mask-image: radial-gradient(ellipse 92% 92% at 50% 52%, #000 72%, transparent 100%);
+      mask-image: radial-gradient(ellipse 92% 92% at 50% 52%, #000 72%, transparent 100%);
+    }
+    .inline-sticker { display: flex; align-items: center; justify-content: center; }
+    .inline-sticker img { max-height: 225px; }
+    .has-corner-sticker .slide-body { padding-right: 158px; }
+
+    /* ===== Bottom Control Bar ===== */
+    .controls {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 253, 249, 0.95);
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 8px 24px rgba(41, 37, 36, 0.10);
+      border-radius: 999px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 50;
+      backdrop-filter: blur(8px);
+    }
+    .ctrl-btn {
+      border: 1px solid #e7e0d3;
+      background: #ffffff;
+      color: #292524;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .ctrl-btn:hover { background: #fff7ed; border-color: #fdba74; }
+    .ctrl-select {
+      border: 1px solid #e7e0d3;
+      background: #ffffff;
+      color: #44403c;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      max-width: 240px;
+    }
+    .ctrl-hint { font-size: 0.74rem; color: #78716c; }
+    .progress-track {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: #e7e0d3;
+      z-index: 60;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 6.25%;
+      background: linear-gradient(90deg, #ea580c, #16a34a);
+      transition: width 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <main class="deck" id="deck">
+
+    <!-- SLIDE 1 -->
+    <section class="slide active" data-title="01. 封面總覽：WSC 4th Ed.">
+      <div class="slide-head">
+        <span class="badge">封面總覽 · Barroso2026-WSC-4thEd</span>
+        <span class="slide-idx">01 / 16</span>
+      </div>
+      <div class="slide-body">
+        <div class="grid-split">
+          <div>
+            <h2>The Data Center as a Computer<br/>把整座資料中心當作一台電腦</h2>
+            <p class="lead">Luiz André Barroso (1964–2023)、Urs Hölzle 與 Parthasarathy Ranganathan 於 2026 年出版第四版（Springer Open Access, 12 章），總結 Google 25 年 <span class="wikilink">[[warehouse-scale-computers]]</span> 實戰架構與數學模型。</p>
+            <div class="grid-2">
+              <div class="bento-card">
+                <div class="kpi">10⁵ 台規模</div>
+                <p>單一組織全棧軟硬體協同設計，將硬體故障視為常態。</p>
+              </div>
+              <div class="bento-card green">
+                <div class="kpi">1.09 PUE</div>
+                <p>設施能效逼近極限，轉向 TPUE 與小時級無碳能源。</p>
+              </div>
+            </div>
+          </div>
+          <div class="inline-sticker">
+            <img src="assets/2811CFAF-EB2B-43CF-A63B-094EEF4BC53C.jpeg" alt="橘子倉鼠圖貼" />
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span>來源：wiki/sources/docs/Barroso2026-WSC-4thEd.md</span>
+        <span>使用鍵盤 ← / → 切換投影片</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 2 -->
+    <section class="slide" data-title="02. Ch 1：規模驅動自動化">
+      <div class="slide-head">
+        <span class="badge">Chapter 1 · Introduction</span>
+        <span class="slide-idx">02 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>規模帶來的質變：為什麼必須自動化？</h2>
+        <p class="lead">WSC 與傳統企業資料中心的本質差異，在於單一組織對電力、散熱、伺服器到分散式軟體的全棧控制。</p>
+        <div class="grid-3">
+          <div class="bento-card neutral">
+            <h3>傳統資料中心</h3>
+            <p>企業 IT 或代管機房（Colocation），執行異質且彼此獨立的軟體堆疊，硬體與軟體高度解耦。</p>
+          </div>
+          <div class="bento-card">
+            <h3>WSC 核心定義</h3>
+            <p>數萬至數十萬台伺服器整合成單一計算實體，針對搜尋、雲端與 AI 工作負載進行跨層最佳化。</p>
+          </div>
+          <div class="bento-card green">
+            <h3>Hyperscalers</h3>
+            <p>具備多個跨地理 Region 與 Availability Zones WSC 的超大規模服務商（Google、AWS、Azure）。</p>
+          </div>
+        </div>
+        <div class="formula-box orange">
+          <div class="formula-label">規模與故障頻率對照（單台年化故障率 AFR = 5%）</div>
+          <p><strong>100 台伺服器</strong>：平均每 2 個月故障 1 次（可人工處理） → <strong>100,000 台伺服器</strong>：平均<strong>每 2 小時故障 1 次</strong>（必須全自動容錯復原）。</p>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span>概念：<span class="wikilink">[[warehouse-scale-computers]]</span></span>
+        <span>02 / 16</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 3 -->
+    <section class="slide has-corner-sticker" data-title="03. Ch 2：地理冗餘與伺服器功耗">
+      <div class="slide-head">
+        <span class="badge">Chapter 2 · Overview of WSC Architecture</span>
+        <span class="slide-idx">03 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>地理冗餘、2025 網路頻寬與伺服器功耗拆解</h2>
+        <div class="grid-2">
+          <div class="bento-card">
+            <h3>Region 與 Availability Zones 冗餘</h3>
+            <ul>
+              <li><strong>Region</strong>：直徑約 50 km，內含 2–3 個獨立園區／Zones。</li>
+              <li><strong>GCP / AWS（3 Zones）</strong>：單 Zone 容錯需 1.5× 容量冗餘。</li>
+              <li><strong>Azure（2 Zones）</strong>：單 Zone 容錯需 2N 容量冗餘。</li>
+              <li><strong>機櫃規格</strong>：1U = 1.75 in (44.45 mm)，標準 42U。</li>
+            </ul>
+          </div>
+          <div class="bento-card green">
+            <h3>2025 網路與儲存譜系</h3>
+            <ul>
+              <li><strong>交換器 / 機櫃內</strong>：25–50 Tbps；機櫃內（64 台）400 Gbps。</li>
+              <li><strong>跨櫃頻寬</strong>：相鄰機櫃 ~100 Gbps；跨 WSC ~50 Gbps。</li>
+              <li><strong>儲存光譜</strong>：<span class="wikilink">[[colossus]]</span>（RS 糾刪碼）、BigTable（最終一致）、<span class="wikilink">[[spanner]]</span>（SQL + 外部強一致）。</li>
+            </ul>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>2024 Google 2-Socket x86 伺服器功耗（768 GB DRAM, 80% 利用率）</th><th>峰值功耗</th><th>佔比</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>CPUs（運算核心）</td><td>786 W</td><td>56.7%</td></tr>
+            <tr><td>Memory（DRAM）</td><td>258 W</td><td>18.6%</td></tr>
+            <tr><td>Power Loss（VRM 與 PDN 的 <math><msup><mi>I</mi><mn>2</mn></msup><mi>R</mi></math> 損耗）</td><td>223 W</td><td>16.1%</td></tr>
+            <tr><td>Cooling (44.6 W) / Storage (44 W) / Networking (30 W)</td><td>118.6 W</td><td>8.6%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="corner-sticker"><img src="assets/A5308558-B20D-4FE2-81E6-15BA8A53D6DB.jpeg" alt="餅乾倉鼠圖貼" /></div>
+      <div class="slide-foot"><span>Ch 2 基礎硬體規格</span><span>03 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 4 -->
+    <section class="slide" data-title="04. Ch 3：WSC 工作負載與 AI/ML">
+      <div class="slide-head">
+        <span class="badge pink">Chapter 3 · Overview of WSC Workloads</span>
+        <span class="slide-idx">04 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>WSC 軟體堆疊、超大規模服務與 AI/ML 工作負載</h2>
+        <div class="grid-3">
+          <div class="bento-card">
+            <h3>7 層堆疊與 SLO 分級</h3>
+            <p>Apps → Frameworks → Cluster Infra（MapReduce / Spanner / Colossus / RPC）→ <span class="wikilink">[[borg]]</span> → Platform SW → HW。</p>
+            <p style="margin-top:6px;">涵蓋 IaaS (GCE)、PaaS (GKE/Cloud Run) 與 SaaS；SLO 由 HALO、HALS 分級至可搶占 BE（Spot）。</p>
+          </div>
+          <div class="bento-card pink">
+            <h3>超大規模應用案例</h3>
+            <ul>
+              <li><strong>Web Search</strong>：索引 &gt;100,000 TB，日夜峰谷比 5×。</li>
+              <li><strong>YouTube</strong>：熱門片 2-pass 轉碼＋Edge CDN。</li>
+              <li><strong>Gmail</strong>：100+ <span class="wikilink">[[spanner]]</span> DB＋Blobstore。</li>
+              <li><strong>GCE</strong>：Titan RoT + Titanium IPU 卸載＋亞秒級 Live Migration。</li>
+            </ul>
+          </div>
+          <div class="bento-card green">
+            <h3>AI/ML 典範轉移</h3>
+            <ul>
+              <li>Pre-training、SFT、RLHF、Distillation 與 Inference-time Compute。</li>
+              <li>數值精度演進：<code>bf16</code> → <code>fp8</code> → <code>fp4</code> → <code>ocp-mx</code>。</li>
+              <li>並行策略：Data / Model / Pipeline Parallelism。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot"><span>Ch 3 系統權衡：先壓縮再加密、Brownouts vs. Blackouts、Consensus (Chubby/etcd)</span><span>04 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 5 -->
+    <section class="slide" data-title="05. Ch 3：Tail Latency 數學推導">
+      <div class="slide-head">
+        <span class="badge pink">Chapter 3 · Tail Latency &amp; Hedged Requests</span>
+        <span class="slide-idx">05 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>Tail Latency 數學推導與長尾緩解策略</h2>
+        <div class="grid-split">
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <p class="lead" style="margin-bottom:0;">分散式查詢向數十至數百台葉節點平行扇出（Fan-out）時，極少數慢節點會放大並主導整體延遲。</p>
+            <div class="formula-box pink">
+              <div class="formula-label">Fan-out 延遲放大公式（單台延遲 &gt; 1s 機率 <math><mi>p</mi><mo>=</mo><mn>0.01</mn></math>，扇出數 <math><mi>n</mi><mo>=</mo><mn>100</mn></math>）</div>
+              <math display="block">
+                <mi>P</mi><mo>(</mo><mtext>latency</mtext><mo>&gt;</mo><mn>1</mn><mtext> s</mtext><mo>)</mo>
+                <mo>=</mo>
+                <mn>1</mn><mo>−</mo><msup><mrow><mo>(</mo><mn>1</mn><mo>−</mo><mi>p</mi><mo>)</mo></mrow><mi>n</mi></msup>
+                <mo>=</mo>
+                <mn>1</mn><mo>−</mo><msup><mrow><mo>(</mo><mn>1</mn><mo>−</mo><mn>0.01</mn><mo>)</mo></mrow><mn>100</mn></msup>
+                <mo>≈</mo>
+                <mn>0.634</mn><mtext> </mtext><mo>(</mo><mn>63</mn><mo>%</mo><mo>)</mo>
+              </math>
+            </div>
+            <div class="grid-2">
+              <div class="bento-card">
+                <h3>Hedged Requests</h3>
+                <p>超過短期門檻（如 p95）即向副本發送備援請求，取最快回傳結果。</p>
+              </div>
+              <div class="bento-card green">
+                <h3>隔離與防護</h3>
+                <p>結合 Heracles、Intel CAT/RDT 快取隔離，以及 Canary 防範 Query of Death。</p>
+              </div>
+            </div>
+          </div>
+          <div class="inline-sticker"><img src="assets/A5308558-B20D-4FE2-81E6-15BA8A53D6DB.jpeg" alt="餅乾倉鼠圖貼" /></div>
+        </div>
+      </div>
+      <div class="slide-foot"><span>概念：<span class="wikilink">[[tail-latency]]</span></span><span>05 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 6 -->
+    <section class="slide" data-title="06. Ch 4：Borg、Colossus、Spanner">
+      <div class="slide-head">
+        <span class="badge">Chapter 4 · WSC Software</span>
+        <span class="slide-idx">06 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>WSC 軟體基石：Borg、Colossus 與 Spanner</h2>
+        <div class="grid-3">
+          <div class="bento-card">
+            <h3><span class="wikilink">[[borg]]</span> 叢集排程</h3>
+            <ul>
+              <li>管理 10–30 MW、數萬台伺服器的 Cluster / Cell。</li>
+              <li>透過 Bin Packing 與 Affinity 共置 Online 與 Batch 任務。</li>
+              <li>經驗延伸至 Kubernetes 與 Cloud Run。</li>
+            </ul>
+          </div>
+          <div class="bento-card green">
+            <h3><span class="wikilink">[[colossus]]</span> 統一儲存</h3>
+            <ul>
+              <li>MD1/MD0 B-trees Metadata + Paxos Curators，消除 GFS 單點瓶頸。</li>
+              <li>Client-side 寫入 Reed-Solomon <math><mi>RS</mi><mo>(</mo><mi>k</mi><mo>,</mo><mi>m</mi><mo>)</mo></math> 至網路磁碟層 <code>D</code>。</li>
+            </ul>
+          </div>
+          <div class="bento-card pink">
+            <h3><span class="wikilink">[[spanner]]</span> 全球資料庫</h3>
+            <ul>
+              <li>GPS + 原子鐘構成 <code>TrueTime</code>，回傳 <math><mo>[</mo><mi>earliest</mi><mo>,</mo><mi>latest</mi><mo>]</mo></math>。</li>
+              <li>外部強一致性與 <strong>99.999% SLO</strong>（CAP 屬 CP，實務近 CA）。</li>
+            </ul>
+          </div>
+        </div>
+        <div class="bento-card neutral">
+          <h3>廣域網路、供應鏈與 SRE 實務</h3>
+          <p>Anycast DNS、GGC、Cold-potato 路由（&gt;98% 單次交遞）；因應供應鏈前置期（TSMC 5nm ~5 個月、變電站 &gt;1 年），搭配 Terraform IaC、Dapper/OpenTelemetry、GWP 與 Blameless Postmortems 維運。</p>
+        </div>
+      </div>
+      <div class="slide-foot"><span>實體：<span class="wikilink">[[borg]]</span> · <span class="wikilink">[[colossus]]</span> · <span class="wikilink">[[spanner]]</span></span><span>06 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 7 -->
+    <section class="slide has-corner-sticker" data-title="07. Ch 5：機房供電與液冷散熱">
+      <div class="slide-head">
+        <span class="badge green">Chapter 5 · Data Center Infrastructure</span>
+        <span class="slide-idx">07 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>機房電力拓撲、功率擺盪與液冷散熱革命</h2>
+        <div class="grid-2">
+          <div class="bento-card">
+            <h3>供電拓撲與效率鏈</h3>
+            <ul>
+              <li>建置成本 $5–20/W，園區 &gt;100 MW；&gt;70% 停機源自人為錯誤。</li>
+              <li><strong>AC 供電鏈 (85%)</strong>：<math><mn>97</mn><mo>%</mo><mo>×</mo><mn>97</mn><mo>%</mo><mo>×</mo><mn>94</mn><mo>%</mo><mo>×</mo><mn>96</mn><mo>%</mo></math>。</li>
+              <li><strong>DC 供電鏈 (89%)</strong>：<math><mn>99</mn><mo>%</mo><mo>×</mo><mn>98</mn><mo>%</mo><mo>×</mo><mn>96</mn><mo>%</mo><mo>×</mo><mn>96</mn><mo>%</mo></math>。</li>
+              <li>機櫃 12V/48V 分散式 UPS 損耗僅 ~0.1%；ML 訓練產生 25–50 MW 功率擺盪。</li>
+            </ul>
+          </div>
+          <div class="bento-card green">
+            <h3>熱管理與液冷（&gt;200–250 W/chip）</h3>
+            <ul>
+              <li>25 MW 機房失去冷卻將以 <strong>0.8°C/s</strong> 升溫，5–15 分鐘內必須緊急斷電（EPO）。</li>
+              <li>ML 機櫃達 50–200 kW（傳統 10–30 kW），自 TPUv3 起導入銅冷板（Cold Plates）+ CDU 與浸沒式冷卻探索。</li>
+              <li>模組化（5 Envelopes）與 Rack Mover 機器人加速 5×。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="corner-sticker"><img src="assets/4F4E807E-05CE-4289-B1DC-C64E8077071F.jpeg" alt="嫩葉倉鼠圖貼" /></div>
+      <div class="slide-foot"><span>Ch 5 Google MVPP（11–15 kV, N+M）與 Checkpointing 降低 ML 設施 Tier 需求</span><span>07 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 8 -->
+    <section class="slide" data-title="08. Ch 6：Scale-Up vs. Scale-Out 模型">
+      <div class="slide-head">
+        <span class="badge">Chapter 6 · Computing Building Blocks</span>
+        <span class="slide-idx">08 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>Scale-Up vs. Scale-Out 效能模型與核心選型</h2>
+        <div class="grid-split">
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div class="formula-box">
+              <div class="formula-label">跨伺服器遠端存取延遲模型（基礎 1 ms，遠端比例 <math><mi>f</mi></math>，伺服器數 <math><mi>N</mi></math>）</div>
+              <math display="block">
+                <mtext>time</mtext><mo>=</mo><mn>1</mn><mtext> ms</mtext><mo>+</mo><mi>f</mi><mo>⋅</mo>
+                <mo>(</mo>
+                  <mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><mn>100</mn><mtext> ns</mtext>
+                  <mo>+</mo>
+                  <mfrac><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow><mi>N</mi></mfrac><mo>⋅</mo><mn>100</mn><mtext> μs</mtext>
+                <mo>)</mo>
+              </math>
+            </div>
+            <div class="bento-card">
+              <h3>超過 2,000 核心後的收斂</h3>
+              <p>比較 <strong>512 台低階伺服器（Scale-Out）</strong> 與 <strong>16 台 128-core SMP（Scale-Up）</strong>，由於兩者的 <math><mfrac><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow><mi>N</mi></mfrac></math> 皆趨近 1，整體效能差距縮小至 <strong>~5% 以內</strong>。</p>
+            </div>
+            <div class="bento-card pink">
+              <h3>Brawny vs. Wimpy Cores</h3>
+              <p>ARM Neoverse V2（Google Axion）與 AWS Graviton 採 <code>1 vCPU = 1 Physical Core</code>，減半每核心 DRAM 可節省 <strong>20%–25%</strong> 伺服器成本。</p>
+            </div>
+          </div>
+          <div class="inline-sticker"><img src="assets/4F4E807E-05CE-4289-B1DC-C64E8077071F.jpeg" alt="嫩葉倉鼠圖貼" /></div>
+        </div>
+      </div>
+      <div class="slide-foot"><span>概念：<span class="wikilink">[[scale-up-vs-scale-out]]</span></span><span>08 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 9 -->
+    <section class="slide" data-title="09. Ch 6：TPU 與 Clos 光學網路">
+      <div class="slide-head">
+        <span class="badge pink">Chapter 6 · Accelerators, Clos Network &amp; Storage</span>
+        <span class="slide-idx">09 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>專用加速器（TPU / VCU / IPU）與 Clos 網路拓撲</h2>
+        <div class="grid-2">
+          <div class="bento-card pink">
+            <h3><span class="wikilink">[[tensor-processing-unit]]</span> 微架構與互連</h3>
+            <ul>
+              <li><strong>MXU</strong>：256×256 Systolic Array，達成 256× 運算元重用。</li>
+              <li><strong>VPU / SparseCore</strong>：128×8 向量單元 + <code>vmem</code> + 推薦系統稀疏核心。</li>
+              <li><strong>3D Torus ICI + OCS</strong>：4×4×4 Cubes + MEMS 光學交換，TPUv7 單 Pod 達 <strong>9,216 顆晶片</strong>。</li>
+            </ul>
+          </div>
+          <div class="bento-card">
+            <h3>VCU、Titanium IPU 與 Multi-Arena</h3>
+            <ul>
+              <li><strong>VCU 轉碼卡</strong>：VP9 吞吐達 CPU 8×–20×；20 顆 VCU 達 33.3× Perf/TCO。</li>
+              <li><strong>Titanium IPU</strong>：Intel E2100（200 Gbps, 16 ARM Neoverse N1 核心）。</li>
+              <li><strong>Multi-Arena</strong>：CPU、GPU、BMC、SmartNIC 各自為獨立信任域。</li>
+            </ul>
+          </div>
+        </div>
+        <div class="formula-box orange">
+          <div class="formula-label">三層 Fat-Tree Clos 網路規模（<math><mi>k</mi></math>-port 交換器）與儲存演進</div>
+          <math display="block">
+            <mtext>Servers</mtext><mo>=</mo><mfrac><msup><mi>k</mi><mn>3</mn></msup><mn>4</mn></mfrac>
+            <mo>,</mo><mspace width="1.2em"/>
+            <mtext>Switches</mtext><mo>=</mo><mfrac><mrow><mn>5</mn><msup><mi>k</mi><mn>2</mn></msup></mrow><mn>4</mn></mfrac>
+          </math>
+          <p style="margin-top:4px; font-size:0.82rem;">Jupiter 從 1.3 Pbps 演進至 6.5 Pbps（無 Spine OCS）；25 TB HDD 以 200 MB/s 完整讀取需 35 小時，全面轉向 Diskless + Flash Appliances。</p>
+        </div>
+      </div>
+      <div class="slide-foot"><span>實體：<span class="wikilink">[[tensor-processing-unit]]</span></span><span>09 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 10 -->
+    <section class="slide has-corner-sticker" data-title="10. Ch 7：軟體定義基礎設施 (SDI)">
+      <div class="slide-head">
+        <span class="badge green">Chapter 7 · Software-Defined Infrastructure</span>
+        <span class="slide-idx">10 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>Software-Defined Infrastructure (SDI) 四大支柱</h2>
+        <div class="grid-2">
+          <div class="bento-card">
+            <h3>Software-Defined Servers (SDS)</h3>
+            <ul>
+              <li><strong>AutoFDO</strong>：回饋導向編譯最佳化，免費提升 <strong>+10%–15%</strong> 效能。</li>
+              <li><strong>Hugepage TCMalloc</strong>：效能 <strong>+7.7%</strong>、RAM -2.4%、碎片 -26%。</li>
+              <li><strong>Platform-aware 排程</strong>：效能 +7%–10%、加速器利用率 2×。</li>
+              <li>Limoncello MSR 調校、Heracles QoS、Tiered Memory（MRC/MPKI）。</li>
+            </ul>
+          </div>
+          <div class="bento-card green">
+            <h3>SDN、儲存與 AI 自動化</h3>
+            <ul>
+              <li><strong>SDN</strong>：OpenFlow/P4/SONiC、Jupiter WCMP、BwE、B4、Espresso。</li>
+              <li><strong>SD-Storage</strong>：<span class="wikilink">[[colossus]]</span> 分離 Bytes 與 IOPS 計費＋透明 SSD 快取。</li>
+              <li><strong>電力與晶片</strong>：Thunderbolt 雙閾值封頂（+9%–25% OSR 增益）、Autopilot、AlphaChip。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="corner-sticker"><img src="assets/2811CFAF-EB2B-43CF-A63B-094EEF4BC53C.jpeg" alt="橘子倉鼠圖貼" /></div>
+      <div class="slide-foot"><span>概念：<span class="wikilink">[[software-defined-infrastructure]]</span></span><span>10 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 11 -->
+    <section class="slide" data-title="11. Ch 8：延遲階層與 DC Tax">
+      <div class="slide-head">
+        <span class="badge">Chapter 8 · Performance &amp; Latency Hierarchy</span>
+        <span class="slide-idx">11 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>2025 儲存與網路延遲階層 &amp; Data Center Tax</h2>
+        <div class="grid-split">
+          <table>
+            <thead><tr><th>操作 / 儲存與網路階層（2025 基準）</th><th>典型延遲</th></tr></thead>
+            <tbody>
+              <tr><td>L1 Cache Reference</td><td>1 ns</td></tr>
+              <tr><td>L3 Cache Reference</td><td>25 ns</td></tr>
+              <tr><td>Main Memory (DRAM)</td><td>80–250 ns</td></tr>
+              <tr><td>CXL Far Memory</td><td>1 μs</td></tr>
+              <tr><td>400 Gbps 網路傳送 1 MB</td><td>20 μs</td></tr>
+              <tr><td>NVMe SSD 隨機讀取</td><td>80 μs</td></tr>
+              <tr><td>HDD 磁頭尋道（Seek）</td><td>10 ms</td></tr>
+              <tr><td>跨洲往返（CA – NL – CA）</td><td>150 ms</td></tr>
+            </tbody>
+          </table>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div class="bento-card pink">
+              <div class="kpi">~30% 週期</div>
+              <h3>Data Center Tax</h3>
+              <p>RPC、Protobuf 序列化、壓縮與記憶體拷貝等底層開銷佔據全機隊約三成 CPU 算力，是硬體卸載（如 Titanium IPU）的首要目標。</p>
+            </div>
+            <div class="bento-card neutral">
+              <h3>基準與模擬工具鏈</h3>
+              <p>分層模擬（Core → SoC → Node → Cluster）、Fleetbench、WSMeter（GCU 指標）與 Sage。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot"><span>Ch 8 效能衡量體系</span><span>11 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 12 -->
+    <section class="slide" data-title="12. Ch 8：TCO 總擁有成本模型">
+      <div class="slide-head">
+        <span class="badge">Chapter 8 · Total Cost of Ownership (TCO)</span>
+        <span class="slide-idx">12 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>TCO 總擁有成本模型與自建 vs. 雲端比較</h2>
+        <div class="formula-box orange">
+          <div class="formula-label">WSC 總擁有成本（TCO）核心拆解公式</div>
+          <math display="block">
+            <mtext>TCO</mtext><mo>=</mo>
+            <mtext>DC depreciation</mtext><mo>+</mo>
+            <mtext>DC opex</mtext><mo>+</mo>
+            <mtext>server depreciation</mtext><mo>+</mo>
+            <mtext>server opex</mtext>
+          </math>
+        </div>
+        <div class="grid-3">
+          <div class="bento-card">
+            <h3>資本支出與折舊假設</h3>
+            <p>資料中心 Capex 約 <strong>$6–13/W</strong>（另加場址開發 $1–2/W）；伺服器採 <strong>6 年折舊</strong>，並計入專用晶片 NRE 攤提。</p>
+          </div>
+          <div class="bento-card green">
+            <h3>On-Premises（3 年期）</h3>
+            <div class="kpi">$47,000</div>
+            <p>計入真實機房 PUE、維護人力、軟體授權與較低平均利用率後的實質成本。</p>
+          </div>
+          <div class="bento-card pink">
+            <h3>GCP 雲端（3 年期）</h3>
+            <div class="kpi">$50,500</div>
+            <p>兩者差距極小，雲端另提供彈性擴縮容與免除前置建置風險的選擇權價值。</p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot"><span>Ch 8 經濟模型（Case A/B/C 與 On-prem vs. GCP 對比）</span><span>12 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 13 -->
+    <section class="slide" data-title="13. Ch 9：PUE、TPUE 與超額訂閱">
+      <div class="slide-head">
+        <span class="badge green">Chapter 9 · Energy Efficiency Metrics</span>
+        <span class="slide-idx">13 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>能效核心公式：PUE、TPUE、WUE 與超額訂閱</h2>
+        <div class="grid-split">
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="formula-box">
+              <div class="formula-label">WSC 端到端計算能源效率拆解</div>
+              <math display="block">
+                <mtext>Efficiency</mtext><mo>=</mo>
+                <mfrac><mn>1</mn><mtext>PUE</mtext></mfrac><mo>⋅</mo>
+                <mfrac><mn>1</mn><mtext>SPUE</mtext></mfrac><mo>⋅</mo>
+                <mfrac><mtext>Computation</mtext><mtext>Energy To Components</mtext></mfrac>
+              </math>
+            </div>
+            <div class="formula-box">
+              <div class="formula-label">PUE、TPUE 與用水效率 WUE 定義</div>
+              <math display="block">
+                <mtext>PUE</mtext><mo>=</mo><mfrac><mtext>Facility Power</mtext><mtext>Equipment Power</mtext></mfrac>
+                <mo>,</mo><mspace width="0.8em"/>
+                <mtext>TPUE</mtext><mo>=</mo><mtext>PUE</mtext><mo>×</mo><mtext>SPUE</mtext>
+                <mo>,</mo><mspace width="0.8em"/>
+                <mtext>WUE</mtext><mo>=</mo><mfrac><mtext>Water (L)</mtext><mtext>Energy (kWh)</mtext></mfrac>
+              </math>
+            </div>
+            <div class="formula-box orange">
+              <div class="formula-label">Power Oversubscription 容量增益（5,000 台叢集尖峰僅達 72% 額定功率）</div>
+              <math display="block">
+                <mtext>Capacity Gain</mtext><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>−</mo><mn>0.28</mn></mrow></mfrac><mo>=</mo><mn>1.39</mn><mo>×</mo>
+                <mtext> </mtext><mo>(</mo><mtext>Google MVPP 實務採 25%</mtext><mo>)</mo>
+              </math>
+            </div>
+          </div>
+          <div class="inline-sticker"><img src="assets/4F4E807E-05CE-4289-B1DC-C64E8077071F.jpeg" alt="嫩葉倉鼠圖貼" /></div>
+        </div>
+      </div>
+      <div class="slide-foot"><span>概念：<span class="wikilink">[[power-usage-effectiveness]]</span> · TPUE 從 3.2 (2005) 降至 ~1.35</span><span>13 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 14 -->
+    <section class="slide" data-title="14. Ch 9：永續碳排與 AI 經濟學">
+      <div class="slide-head">
+        <span class="badge green">Chapter 9 · Sustainability &amp; AI Economics</span>
+        <span class="slide-idx">14 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>全生命週期碳排、水資源與 1 GW AI 經濟模型</h2>
+        <div class="grid-3">
+          <div class="bento-card green">
+            <h3>Scope 1 / 2 / 3 減碳</h3>
+            <ul>
+              <li><strong>Scope 1</strong>：僅佔 Google 總排放 1%。</li>
+              <li><strong>Scope 2</strong>：2023 年達 <strong>64% Hourly CFE</strong>，結合 Carbon-aware 排程。</li>
+              <li><strong>Scope 3</strong>：推進 LC3 低碳混凝土與 Mass Timber。</li>
+            </ul>
+          </div>
+          <div class="bento-card">
+            <h3>用水效率與 AI 能耗</h3>
+            <ul>
+              <li><strong>WUE</strong>：產業平均 1.8、Meta 0.26、AWS 0.25（目標 2030 達 120% Water Positive）。</li>
+              <li>AI 佔 Google 總電量 &lt;15%（2019–2021），其中<strong>推論約佔 60%</strong>。</li>
+            </ul>
+          </div>
+          <div class="bento-card pink">
+            <h3>1 GW AI 資料中心帳本</h3>
+            <div class="kpi">$40–50B</div>
+            <p>6 年期總 TCO 高達 400–500 億美元，對應需產生約 <strong>$100B</strong> 的 6 年營收才能打平商業回報。</p>
+          </div>
+        </div>
+        <div class="bento-card neutral">
+          <h3>全球 ICT 用電結構（IEA 統計）</h3>
+          <p>使用者終端設備佔 <strong>46.0%</strong>、網路基礎設施佔 <strong>27.0%</strong>、其他資料中心佔 <strong>15.8%</strong>，而高效率的 WSCs 僅佔全球 ICT 總用電的 <strong>8.5%</strong>。</p>
+        </div>
+      </div>
+      <div class="slide-foot"><span>Ch 9 能源比例性：Turbo on Demand (+30%) 與編譯器平滑 ML 15 MW 擺盪 (-50%)</span><span>14 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 15 -->
+    <section class="slide has-corner-sticker" data-title="15. Ch 10：可信計算與縱深防禦">
+      <div class="slide-head">
+        <span class="badge pink">Chapter 10 · Trusted Computing</span>
+        <span class="slide-idx">15 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>可信計算：從硬體失效率到零信任機密運算</h2>
+        <div class="grid-2">
+          <div class="bento-card pink">
+            <h3>故障根因與硬體壽命</h3>
+            <ul>
+              <li><strong>68% 大規模停機</strong>源自設定變更與程式二進位檔推送。</li>
+              <li>嚴重度：<code>Corrupted &gt; Unreachable &gt; Degraded &gt; Masked</code>。</li>
+              <li>Google 年當機率從 2018 年 99.93% 可用度進步至 2024 年 <strong>&lt;5%</strong>。</li>
+              <li>DRAM FIT 70–100（Chipkill ECC）；SSD P/E 壽命 SLC 10k+ / TLC 3k / QLC 1.5k；防範 SDC 靜默損毀與 Arrhenius 斷電衰退。</li>
+            </ul>
+          </div>
+          <div class="bento-card">
+            <h3>縱深防禦與機密運算</h3>
+            <ul>
+              <li><strong>實體 6 層防禦</strong>與 CAPA 流程（點出 BMS 氣隙隔離受限）。</li>
+              <li><strong>Silicon RoT</strong>：Titan / OpenTitan / Caliptra 驗證啟動。</li>
+              <li><strong>全路徑加密</strong>：靜態每資料塊獨立 DEK AES-256；傳輸採用 ALTS / TLS。</li>
+              <li><strong>Confidential Computing (TEE)</strong>：AMD SEV-SNP、Intel TDX、ARM CCA + Zero-Trust + 雙人覆核原則。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="corner-sticker"><img src="assets/A5308558-B20D-4FE2-81E6-15BA8A53D6DB.jpeg" alt="餅乾倉鼠圖貼" /></div>
+      <div class="slide-foot"><span>Ch 10 安全性與可靠性工程</span><span>15 / 16</span></div>
+    </section>
+
+    <!-- SLIDE 16 -->
+    <section class="slide" data-title="16. Ch 11–12：演進與五大結論">
+      <div class="slide-head">
+        <span class="badge">Chapter 11–12 · Retrospective &amp; Key Takeaways</span>
+        <span class="slide-idx">16 / 16</span>
+      </div>
+      <div class="slide-body">
+        <div class="grid-split">
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <h2>25 年演進與全書五大核心結論</h2>
+            <div class="bento-card neutral">
+              <p>回顧 Google WSC 的 <strong>5 個時代（1999–2023）</strong>、<strong>9 項關鍵教訓</strong>（區分 Roofshots 漸進最佳化與 Moonshots 典範轉移），並展望「<strong>Mud to Cloud</strong>」與「<strong>Chip to Ship</strong>」的垂直整合未來。</p>
+            </div>
+            <div class="bento-card">
+              <ul>
+                <li><strong>全棧協同設計</strong>：資料中心是單一計算實體，軟體必須吸收常態硬體故障。</li>
+                <li><strong>AI 重塑物理極限</strong>：50–200 kW 機櫃推動冷板液冷、OCS 與專用 ASIC。</li>
+                <li><strong>長尾與稅賦主導體驗</strong>：以 Hedged Requests 壓制 63% 扇出長尾，並削減 30% DC Tax。</li>
+                <li><strong>能效進入精細化</strong>：超越 PUE 1.09，靠 TPUE、Power Oversubscription 與 Hourly CFE 推進。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="inline-sticker"><img src="assets/2811CFAF-EB2B-43CF-A63B-094EEF4BC53C.jpeg" alt="橘子倉鼠圖貼" /></div>
+        </div>
+      </div>
+      <div class="slide-foot"><span>完成投影片生成 · 參考 Top 25 WSC Papers (1998 PageRank – 2022 Pathways)</span><span>16 / 16</span></div>
+    </section>
+
+  </main>
+
+  <nav class="controls" aria-label="投影片控制列">
+    <button class="ctrl-btn" id="prevBtn" type="button">← 上一頁</button>
+    <select class="ctrl-select" id="slideSelect" aria-label="跳至指定投影片"></select>
+    <button class="ctrl-btn" id="nextBtn" type="button">下一頁 →</button>
+    <span class="ctrl-hint" id="pageIndicator">1 / 16</span>
+  </nav>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const slideSelect = document.getElementById("slideSelect");
+    const pageIndicator = document.getElementById("pageIndicator");
+    const progressFill = document.getElementById("progressFill");
+    let current = 0;
+
+    slides.forEach((s, i) => {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = s.dataset.title || `Slide ${i + 1}`;
+      slideSelect.appendChild(opt);
+    });
+
+    function goTo(index) {
+      current = Math.max(0, Math.min(slides.length - 1, index));
+      slides.forEach((s, i) => s.classList.toggle("active", i === current));
+      slideSelect.value = String(current);
+      pageIndicator.textContent = `${current + 1} / ${slides.length}`;
+      progressFill.style.width = `${(((current + 1) / slides.length) * 100).toFixed(2)}%`;
+    }
+
+    prevBtn.addEventListener("click", () => goTo(current - 1));
+    nextBtn.addEventListener("click", () => goTo(current + 1));
+    slideSelect.addEventListener("change", (e) => goTo(Number(e.target.value)));
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
+        e.preventDefault();
+        goTo(current + 1);
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        goTo(current - 1);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        goTo(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        goTo(slides.length - 1);
+      }
+    });
+  </script>
+</body>
+</html>

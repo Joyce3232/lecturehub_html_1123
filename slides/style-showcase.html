@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Wiki 簡報風格示範選擇器 — WSC 4th Ed.</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+  <style>
+    :root {
+      --ui-bg: #f1f5f9;
+      --ui-text: #0f172a;
+      --ui-border: #cbd5e1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", "Segoe UI", sans-serif;
+      background: var(--ui-bg);
+      color: var(--ui-text);
+      min-height: 100vh;
+      padding: 24px 20px 48px;
+    }
+    .topbar {
+      max-width: 1120px;
+      margin: 0 auto 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: #ffffff;
+      padding: 16px 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+      border: 1px solid #e2e8f0;
+    }
+    .topbar-title h1 { font-size: 1.1rem; font-weight: 700; }
+    .topbar-title p { font-size: 0.85rem; color: #64748b; margin-top: 2px; }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .tab-btn {
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #334155;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .tab-btn:hover { background: #e2e8f0; }
+    .tab-btn.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+
+    .stage-wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    .style-panel { display: none; }
+    .style-panel.active { display: block; }
+
+    .style-meta {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 14px 20px;
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .style-meta h2 { font-size: 1.05rem; }
+    .style-meta p { font-size: 0.86rem; color: #475569; margin-top: 2px; }
+    .swatches { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #64748b; }
+    .swatch { width: 20px; height: 20px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.12); }
+
+    .slides-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    .slide-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .slide {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 14px 36px rgba(15, 23, 42, 0.12);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* =====================================================
+       THEME A: Warm Bento Pastel (日系柔彩便當盒風)
+    ===================================================== */
+    .theme-a .slide {
+      background: #fffdf9;
+      color: #2d2a26;
+      padding: 36px 42px;
+      border: 2px solid #f3e8d8;
+    }
+    .theme-a .badge {
+      display: inline-block;
+      background: #ffedd5;
+      color: #c2410c;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 999px;
+    }
+    .theme-a .badge.green { background: #dcfce7; color: #15803d; }
+    .theme-a h3 { font-size: 2rem; line-height: 1.25; margin: 12px 0 8px; color: #1c1917; }
+    .theme-a .sub { font-size: 0.98rem; color: #57534e; max-width: 68ch; }
+    .theme-a .bento {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 20px;
+      align-items: center;
+      margin-top: 14px;
+      flex: 1;
+    }
+    .theme-a .bento-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .theme-a .card {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .theme-a .card.green { background: #f0fdf4; border-color: #bbf7d0; }
+    .theme-a .card.pink { background: #fdf2f8; border-color: #fbcfe8; }
+    .theme-a .card .kpi { font-size: 1.65rem; font-weight: 800; color: #ea580c; }
+    .theme-a .card.green .kpi { color: #16a34a; }
+    .theme-a .card.pink .kpi { color: #db2777; }
+    .theme-a .card .cap { font-size: 0.82rem; color: #44403c; margin-top: 4px; line-height: 1.4; }
+    .theme-a .sticker-box {
+      background: transparent;
+      border: none;
+      padding: 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      height: 100%;
+    }
+    .theme-a .sticker-box img {
+      max-height: 255px;
+      width: 100%;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+      -webkit-mask-image: radial-gradient(ellipse 92% 92% at 50% 52%, #000 72%, transparent 100%);
+      mask-image: radial-gradient(ellipse 92% 92% at 50% 52%, #000 72%, transparent 100%);
+    }
+    .theme-a .formula-box {
+      background: #f0fdf4;
+      border-left: 5px solid #22c55e;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin: 10px 0;
+      font-size: 1rem;
+    }
+    .theme-a .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: #78716c;
+      border-top: 1px solid #f1ece1;
+      padding-top: 10px;
+    }
+
+    /* =====================================================
+       THEME B: Swiss Keynote (瑞士現代極簡白底風)
+    ===================================================== */
+    .theme-b .slide {
+      background: #ffffff;
+      color: #111827;
+      padding: 40px 48px;
+      border: 1px solid #e5e7eb;
+    }
+    .theme-b .swiss-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 2px solid #111827;
+      padding-bottom: 10px;
+    }
+    .theme-b .kicker { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em; color: #ea580c; text-transform: uppercase; }
+    .theme-b .pg { font-family: ui-monospace, monospace; font-size: 0.82rem; color: #6b7280; }
+    .theme-b .split {
+      display: grid;
+      grid-template-columns: 1.35fr 0.95fr;
+      gap: 32px;
+      align-items: center;
+      flex: 1;
+      padding: 16px 0;
+    }
+    .theme-b h3 { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 14px; }
+    .theme-b ul { list-style: none; display: grid; gap: 10px; }
+    .theme-b li {
+      font-size: 0.94rem;
+      line-height: 1.5;
+      padding-left: 16px;
+      border-left: 3px solid #ea580c;
+      color: #374151;
+    }
+    .theme-b .img-clean {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .theme-b .img-clean img {
+      max-height: 245px;
+      width: 100%;
+      object-fit: contain;
+    }
+    .theme-b .swiss-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 14px;
+    }
+    .theme-b .m-num { font-size: 1.7rem; font-weight: 800; color: #111827; }
+    .theme-b .m-num span { color: #ea580c; }
+    .theme-b .m-lbl { font-size: 0.78rem; color: #6b7280; margin-top: 2px; }
+    .theme-b .math-panel {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      padding: 16px 20px;
+      margin-top: 10px;
+      font-size: 0.98rem;
+    }
+
+    /* =====================================================
+       THEME C: Obsidian Study Note Deck (知識卡片筆記風)
+    ===================================================== */
+    .theme-c .slide {
+      background: #f8fafc;
+      color: #1e293b;
+      padding: 34px 40px;
+      border: 1px solid #cbd5e1;
+    }
+    .theme-c .obs-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .theme-c .wikilinks { display: flex; flex-wrap: wrap; gap: 6px; }
+    .theme-c .wlink {
+      font-family: ui-monospace, monospace;
+      font-size: 0.76rem;
+      background: #ede9fe;
+      color: #6d28d9;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .theme-c h3 { font-size: 1.85rem; color: #0f172a; margin-bottom: 12px; }
+    .theme-c .obs-body {
+      display: grid;
+      grid-template-columns: 1.35fr 0.85fr;
+      gap: 20px;
+      flex: 1;
+      align-items: stretch;
+    }
+    .theme-c .callout {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #7c3aed;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+    .theme-c .callout-title { font-size: 0.82rem; font-weight: 700; color: #6d28d9; margin-bottom: 6px; }
+    .theme-c .callout p, .theme-c .callout li { font-size: 0.9rem; line-height: 1.5; color: #334155; }
+    .theme-c .obs-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .theme-c .obs-card img { max-height: 215px; width: 100%; object-fit: contain; border-radius: 10px; }
+    .theme-c .obs-note { font-size: 0.78rem; color: #64748b; margin-top: 8px; text-align: center; }
+
+    /* =====================================================
+       THEME D: Tech Blueprint (深色科技藍圖＋亮色圖卡)
+    ===================================================== */
+    .theme-d .slide {
+      background: radial-gradient(circle at top right, #1e293b 0%, #0f172a 65%);
+      color: #f8fafc;
+      padding: 36px 44px;
+      border: 1px solid #334155;
+    }
+    .theme-d .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(56, 189, 248, 0.06) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(56, 189, 248, 0.06) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+    }
+    .theme-d .content-layer { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: space-between; height: 100%; }
+    .theme-d .tag {
+      font-family: ui-monospace, monospace;
+      font-size: 0.78rem;
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      background: rgba(56, 189, 248, 0.1);
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .theme-d h3 { font-size: 2rem; margin: 10px 0 8px; color: #ffffff; }
+    .theme-d .tech-split {
+      display: grid;
+      grid-template-columns: 1.3fr 0.9fr;
+      gap: 24px;
+      align-items: center;
+      flex: 1;
+    }
+    .theme-d .tech-box {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 12px;
+    }
+    .theme-d .tech-box h4 { font-size: 0.88rem; color: #38bdf8; margin-bottom: 6px; font-family: ui-monospace, monospace; }
+    .theme-d .tech-box p { font-size: 0.9rem; color: #cbd5e1; line-height: 1.5; }
+    .theme-d .photo-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      transform: rotate(1.2deg);
+      text-align: center;
+    }
+    .theme-d .photo-card img { max-height: 215px; width: 100%; object-fit: contain; border-radius: 10px; }
+    .theme-d .photo-card span { display: block; font-size: 0.76rem; color: #334155; font-weight: 700; margin-top: 6px; }
+    .theme-d .tech-footer {
+      display: flex;
+      justify-content: space-between;
+      font-family: ui-monospace, monospace;
+      font-size: 0.76rem;
+      color: #94a3b8;
+      border-top: 1px solid #1e293b;
+      padding-top: 10px;
+    }
+
+    @media (max-width: 820px) {
+      .slide { aspect-ratio: auto; min-height: 460px; }
+      .theme-a .bento, .theme-b .split, .theme-c .obs-body, .theme-d .tech-split { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-title">
+      <h1>HTML 簡報風格示範選擇器</h1>
+      <p>以 <code>wiki/</code> 實質內容＋<code>slides/assets/</code> 圖貼渲染，點選上方頁籤比較 4 種風格</p>
+    </div>
+    <nav class="tabs" aria-label="風格切換">
+      <button class="tab-btn active" onclick="showTheme('a', this)">A. Warm Bento Pastel</button>
+      <button class="tab-btn" onclick="showTheme('b', this)">B. Swiss Keynote</button>
+      <button class="tab-btn" onclick="showTheme('c', this)">C. Obsidian Study Deck</button>
+      <button class="tab-btn" onclick="showTheme('d', this)">D. Tech Blueprint</button>
+    </nav>
+  </header>
+
+  <main class="stage-wrap">
+
+    <!-- ==================== THEME A ==================== -->
+    <section id="theme-a" class="style-panel theme-a active">
+      <div class="style-meta">
+        <div>
+          <h2>風格 A：Warm Bento Pastel（日系柔彩便當盒風）</h2>
+          <p>取樣自 <code>assets/</code> 圖貼的暖橘、抹茶綠、柔粉色塊，搭配圓角卡片，讓硬核 WSC 架構變得親切易讀。</p>
+        </div>
+        <div class="swatches">
+          <span>色票：</span>
+          <div class="swatch" style="background:#fffdf9"></div>
+          <div class="swatch" style="background:#ea580c"></div>
+          <div class="swatch" style="background:#16a34a"></div>
+          <div class="swatch" style="background:#db2777"></div>
+        </div>
+      </div>
+
+      <div class="slides-grid">
+        <div>
+          <div class="slide-label">示範頁 1 — 核心結論與關鍵數字（使用橘子倉鼠圖貼）</div>
+          <article class="slide">
+            <div>
+              <span class="badge">Chapter 1–2 · Warehouse-Scale Computers</span>
+              <h3>把整座資料中心當作「一台電腦」來設計</h3>
+              <p class="sub">Barroso, Hölzle &amp; Ranganathan (2026) 指出：當伺服器規模達 $10^5$ 等級，硬體故障成為每兩小時一次的常態。</p>
+            </div>
+            <div class="bento">
+              <div class="bento-cards">
+                <div class="card">
+                  <div class="kpi">每 2 小時</div>
+                  <div class="cap">100,000 台伺服器（5% AFR）平均故障間隔，必須自動化復原</div>
+                </div>
+                <div class="card green">
+                  <div class="kpi">1.09 PUE</div>
+                  <div class="cap">Google 追蹤 12 個月平均能效（DeepMind AI 降低 40% 夏季冷卻耗電）</div>
+                </div>
+                <div class="card pink">
+                  <div class="kpi">50–200 kW</div>
+                  <div class="cap">AI/ML 機櫃功耗密度（傳統僅 10–30 kW），全面轉向冷板液冷</div>
+                </div>
+                <div class="card">
+                  <div class="kpi">~30% 週期</div>
+                  <div class="cap">Data Center Tax：RPC、壓縮與序列化消耗全機隊算力比例</div>
+                </div>
+              </div>
+              <div class="sticker-box">
+                <img src="assets/2811CFAF-EB2B-43CF-A63B-094EEF4BC53C.jpeg" alt="橘子倉鼠圖貼" />
+              </div>
+            </div>
+            <div class="slide-footer">
+              <span>來源：[[Barroso2026-WSC-4thEd]]</span>
+              <span>01 / 12</span>
+            </div>
+          </article>
+        </div>
+
+        <div>
+          <div class="slide-label">示範頁 2 — 數學公式與能效指標（使用抹茶綠倉鼠圖貼）</div>
+          <article class="slide">
+            <div>
+              <span class="badge green">Chapter 9 · Energy &amp; Power Oversubscription</span>
+              <h3>設施 PUE 已逼近極限，下一步看 TPUE 與超額訂閱</h3>
+            </div>
+            <div class="bento">
+              <div>
+                <div class="formula-box">
+                  $$\text{Efficiency} = \frac{1}{\text{PUE}} \cdot \frac{1}{\text{SPUE}} \cdot \frac{\text{Computation}}{\text{Energy To Components}}$$
+                </div>
+                <div class="formula-box" style="background:#fff7ed; border-color:#f97316;">
+                  $$\text{Capacity Gain} = \frac{1}{1 - 0.28} = 1.39\times \quad (\text{5,000 台叢集尖峰僅達 72%})$$
+                </div>
+                <p class="sub" style="margin-top:8px;">Google 的 TPUE 已從 2005 年的 <strong>3.2</strong> 降至約 <strong>1.35</strong>，並透過 Thunderbolt 雙閾值封頂安全實作 25% Power Oversubscription。</p>
+              </div>
+              <div class="sticker-box">
+                <img src="assets/4F4E807E-05CE-4289-B1DC-C64E8077071F.jpeg" alt="嫩葉倉鼠圖貼" />
+              </div>
+            </div>
+            <div class="slide-footer">
+              <span>概念：[[power-usage-effectiveness]] · [[software-defined-infrastructure]]</span>
+              <span>02 / 12</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== THEME B ==================== -->
+    <section id="theme-b" class="style-panel theme-b">
+      <div class="style-meta">
+        <div>
+          <h2>風格 B：Swiss Keynote（瑞士現代極簡白底風）</h2>
+          <p>純白底無縫銜接 <code>assets/</code> 圖貼的白底，搭配高對比排版與專業發表會視覺節奏。</p>
+        </div>
+        <div class="swatches">
+          <span>色票：</span>
+          <div class="swatch" style="background:#ffffff"></div>
+          <div class="swatch" style="background:#111827"></div>
+          <div class="swatch" style="background:#ea580c"></div>
+        </div>
+      </div>
+
+      <div class="slides-grid">
+        <div>
+          <div class="slide-label">示範頁 1 — 極簡雙欄架構（純白無邊框融入圖貼）</div>
+          <article class="slide">
+            <div class="swiss-top">
+              <span class="kicker">WSC Architecture · Chapter 3</span>
+              <span class="pg">SLIDE 01</span>
+            </div>
+            <div class="split">
+              <div>
+                <h3>Tail Latency 的放大效應<br/>與 Hedged Requests</h3>
+                <ul>
+                  <li><strong>平行扇出瓶頸</strong>：當 1 個查詢需等待 100 台葉節點伺服器，單點 1% 慢回應會讓整體長尾機率暴增。</li>
+                  <li><strong>Hedged Requests</strong>：超過 p95 延遲門檻即向副本發送備援請求，大幅壓低 p99 延遲。</li>
+                  <li><strong>微架構隔離</strong>：透過 Heracles 與 Intel CAT/RDT 隔離共置服務的快取干擾。</li>
+                </ul>
+                <div class="math-panel">
+                  $$P(\text{latency} > 1\text{ s}) = 1 - (1 - 0.01)^{100} \approx 63\%$$
+                </div>
+              </div>
+              <div class="img-clean">
+                <img src="assets/A5308558-B20D-4FE2-81E6-15BA8A53D6DB.jpeg" alt="餅乾倉鼠圖貼" />
+              </div>
+            </div>
+            <div class="swiss-metrics">
+              <div><div class="m-num">63<span>%</span></div><div class="m-lbl">100 台扇出落入 >1s 長尾機率</div></div>
+              <div><div class="m-num">99.999<span>%</span></div><div class="m-lbl">Spanner 跨區強一致性 SLO</div></div>
+              <div><div class="m-num">256<span>×</span></div><div class="m-lbl">TPU MXU 脈動陣列運算元重用</div></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== THEME C ==================== -->
+    <section id="theme-c" class="style-panel theme-c">
+      <div class="style-meta">
+        <div>
+          <h2>風格 C：Obsidian Study Deck（知識卡片筆記風）</h2>
+          <p>保留 <code>[[wikilink]]</code> 標籤徽章、Obsidian Callout 重點框與清楚的數學區塊，與你的筆記庫無縫接軌。</p>
+        </div>
+        <div class="swatches">
+          <span>色票：</span>
+          <div class="swatch" style="background:#f8fafc"></div>
+          <div class="swatch" style="background:#7c3aed"></div>
+          <div class="swatch" style="background:#1e293b"></div>
+        </div>
+      </div>
+
+      <div class="slides-grid">
+        <div>
+          <div class="slide-label">示範頁 1 — Obsidian Callout ＋ 雙向連結標籤</div>
+          <article class="slide">
+            <div>
+              <div class="obs-header">
+                <div class="wikilinks">
+                  <span class="wlink">[[Barroso2026-WSC-4thEd]]</span>
+                  <span class="wlink">[[scale-up-vs-scale-out]]</span>
+                  <span class="wlink">[[borg]]</span>
+                </div>
+                <span style="font-size:0.8rem; color:#64748b;">Note Card · 01</span>
+              </div>
+              <h3>Scale-Up vs. Scale-Out 何時收斂？</h3>
+            </div>
+            <div class="obs-body">
+              <div>
+                <div class="callout">
+                  <div class="callout-title">[!abstract] 核心結論（Key Takeaways）</div>
+                  <p>當叢集總核心數突破 <strong>2,000 cores</strong> 時，512 台低階伺服器（Scale-Out）與 16 台 128-core SMP（Scale-Up）的整體執行時間差距縮小至 <strong>5% 以內</strong>，但 Perf/TCO 明顯偏向 Scale-Out。</p>
+                </div>
+                <div class="callout" style="border-left-color:#0ea5e9;">
+                  <div class="callout-title" style="color:#0284c7;">[!note] 效能分析公式（Chapter 6）</div>
+                  <p>$$\text{time} = 1\text{ ms} + f \cdot \left(\frac{1}{N} \cdot 100\text{ ns} + \frac{N-1}{N} \cdot 100\ \mu\text{s}\right)$$</p>
+                </div>
+              </div>
+              <div class="obs-card">
+                <img src="assets/4F4E807E-05CE-4289-B1DC-C64E8077071F.jpeg" alt="嫩葉倉鼠圖貼" />
+                <div class="obs-note">Wiki 筆記卡片右側圖貼配圖</div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== THEME D ==================== -->
+    <section id="theme-d" class="style-panel theme-d">
+      <div class="style-meta">
+        <div>
+          <h2>風格 D：Tech Blueprint（深色科技藍圖＋亮色圖卡風）</h2>
+          <p>深海軍藍網格背景突顯資料中心架構與數據，將倉鼠圖貼放入白底圓角圖卡製造強烈反差感。</p>
+        </div>
+        <div class="swatches">
+          <span>色票：</span>
+          <div class="swatch" style="background:#0f172a"></div>
+          <div class="swatch" style="background:#38bdf8"></div>
+          <div class="swatch" style="background:#ffffff"></div>
+        </div>
+      </div>
+
+      <div class="slides-grid">
+        <div>
+          <div class="slide-label">示範頁 1 — 深色工程藍圖 ＋ 白底插畫圖卡</div>
+          <article class="slide">
+            <div class="grid-bg"></div>
+            <div class="content-layer">
+              <div>
+                <span class="tag">ENTITY // TENSOR PROCESSING UNIT (TPU)</span>
+                <h3>專為深度學習矩陣運算打造的 WSC 加速器</h3>
+              </div>
+              <div class="tech-split">
+                <div>
+                  <div class="tech-box">
+                    <h4>01 // SYSTOLIC ARRAY (MXU)</h4>
+                    <p>採用 $256 \times 256$ 脈動陣列取代傳統 CPU 快取階層，達成 $256\times$ 運算元重用；TPUv1 即較 Haswell CPU 提升系統級 $34\times$、晶片級 $83\times$ Perf/W。</p>
+                  </div>
+                  <div class="tech-box">
+                    <h4>02 // 3D TORUS ICI + OCS</h4>
+                    <p>透過 $4 \times 4 \times 4$ 立方拓撲與 MEMS 光學電路交換（OCS），TPUv7 單 Pod 可擴展至 <strong>9,216 顆晶片</strong>，並全面導入銅冷板液冷（CDU）。</p>
+                  </div>
+                </div>
+                <div class="photo-card">
+                  <img src="assets/2811CFAF-EB2B-43CF-A63B-094EEF4BC53C.jpeg" alt="橘子倉鼠圖貼" />
+                  <span>fig. WSC Compute Mascot</span>
+                </div>
+              </div>
+              <div class="tech-footer">
+                <span>SOURCE: Barroso2026-WSC-4thEd (Ch.5, Ch.6, Ch.9)</span>
+                <span>SLIDE 01 / 12</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    function showTheme(id, btn) {
+      document.querySelectorAll('.style-panel').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('theme-' + id).classList.add('active');
+      btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>

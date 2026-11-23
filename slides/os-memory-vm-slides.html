@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OS 記憶體管理與虛擬記憶體入門 — 雙軌教學簡報（白話＋專業）</title>
+  <style>
+    :root {
+      --bg-stage: #f4efe6;
+      --bg-slide: #fffdf9;
+      --text-main: #292524;
+      --text-muted: #57534e;
+      --border-soft: #efe5d5;
+      --orange: #ea580c;
+      --orange-bg: #fff7ed;
+      --orange-bd: #fed7aa;
+      --green: #15803d;
+      --green-bg: #f0fdf4;
+      --green-bd: #bbf7d0;
+      --pink: #be185d;
+      --pink-bg: #fdf2f8;
+      --pink-bd: #fbcfe8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", "Segoe UI", sans-serif;
+      background: var(--bg-stage);
+      color: var(--text-main);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 16px 56px;
+    }
+
+    math {
+      font-family: "STIX Two Math", "Cambria Math", "Latin Modern Math", "Times New Roman", serif;
+      font-size: 1.03em;
+      color: #1c1917;
+    }
+    math[display="block"] {
+      display: block;
+      text-align: center;
+      margin: 3px 0;
+      font-size: 1.08em;
+    }
+
+    .deck {
+      width: min(1160px, 97vw, calc((100vh - 76px) * 16 / 9));
+      aspect-ratio: 16 / 9;
+      position: relative;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-slide);
+      border: 2px solid var(--border-soft);
+      border-radius: 20px;
+      padding: 20px 30px 15px;
+      box-shadow: 0 18px 44px rgba(41, 37, 36, 0.10);
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+    .slide.active {
+      display: flex;
+      animation: fadeSlide 0.16s ease-out;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0.45; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      position: relative;
+      z-index: 2;
+    }
+    .badge {
+      display: inline-block;
+      background: #ffedd5;
+      color: #c2410c;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+    .badge.green { background: #dcfce7; color: #15803d; }
+    .badge.pink { background: #fce7f3; color: #be185d; }
+    .slide-idx { font-family: ui-monospace, monospace; font-size: 0.74rem; color: #78716c; }
+
+    h2 { font-size: clamp(1.16rem, 1.9vw, 1.54rem); line-height: 1.22; color: #1c1917; margin-bottom: 5px; }
+
+    .analogy-bar {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-left: 4px solid #f59e0b;
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      line-height: 1.42;
+      color: #451a03;
+      margin-bottom: 6px;
+    }
+    .analogy-bar strong { color: #b45309; }
+
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      position: relative;
+      z-index: 2;
+      min-height: 0;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .grid-split { display: grid; grid-template-columns: 1.44fr 0.78fr; gap: 16px; align-items: center; }
+
+    .bento-card {
+      background: var(--orange-bg);
+      border: 1px solid var(--orange-bd);
+      border-radius: 12px;
+      padding: 10px 13px;
+    }
+    .bento-card.green { background: var(--green-bg); border-color: var(--green-bd); }
+    .bento-card.pink { background: var(--pink-bg); border-color: var(--pink-bd); }
+    .bento-card.neutral { background: #faf8f5; border-color: #e7e0d3; }
+
+    .bento-card h3 { font-size: 0.84rem; color: #1c1917; margin-bottom: 4px; }
+    .bento-card p, .bento-card li { font-size: 0.76rem; line-height: 1.42; color: #44403c; }
+    .bento-card ul { padding-left: 15px; display: grid; gap: 2px; }
+
+    .kpi { font-size: 1.24rem; font-weight: 800; color: var(--orange); margin-bottom: 2px; }
+    .bento-card.green .kpi { color: var(--green); }
+    .bento-card.pink .kpi { color: var(--pink); }
+
+    .formula-box {
+      background: var(--green-bg);
+      border: 1px solid var(--green-bd);
+      border-left: 5px solid #22c55e;
+      border-radius: 11px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+    }
+    .formula-box.orange { background: var(--orange-bg); border-color: var(--orange-bd); border-left-color: #f97316; }
+    .formula-box.pink { background: var(--pink-bg); border-color: var(--pink-bd); border-left-color: #ec4899; }
+    .formula-label { font-size: 0.7rem; font-weight: 700; color: #57534e; margin-bottom: 2px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+      background: #ffffff;
+      border-radius: 11px;
+      overflow: hidden;
+      border: 1px solid var(--border-soft);
+    }
+    th, td { padding: 5px 9px; text-align: left; border-bottom: 1px solid #f1ebe0; line-height: 1.36; }
+    th { background: #fff7ed; color: #9a3412; font-weight: 700; }
+    tr:last-child td { border-bottom: none; }
+
+    code {
+      font-family: ui-monospace, monospace;
+      font-size: 0.9em;
+      background: rgba(120, 113, 108, 0.11);
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+
+    .bridge-foot {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border-soft);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.72rem;
+      color: #78716c;
+      position: relative;
+      z-index: 2;
+    }
+    .bridge-q { color: #9a3412; font-weight: 600; }
+
+    .corner-sticker {
+      position: absolute;
+      right: 12px;
+      bottom: 26px;
+      width: 138px;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.94;
+    }
+    .corner-sticker img, .inline-sticker img {
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+      -webkit-mask-image: radial-gradient(ellipse 92% 92% at 50% 52%, #000 72%, transparent 100%);
+      mask-image: radial-gradient(ellipse 92% 92% at 50% 52%, #000 72%, transparent 100%);
+    }
+    .inline-sticker { display: flex; align-items: center; justify-content: center; }
+    .inline-sticker img { max-height: 205px; }
+    .has-corner-sticker .slide-body { padding-right: 138px; }
+
+    .controls {
+      position: fixed;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 253, 249, 0.95);
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 8px 24px rgba(41, 37, 36, 0.10);
+      border-radius: 999px;
+      padding: 4px 13px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      z-index: 50;
+    }
+    .ctrl-btn {
+      border: 1px solid #e7e0d3;
+      background: #ffffff;
+      color: #292524;
+      padding: 4px 11px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .ctrl-btn:hover { background: #fff7ed; border-color: #fdba74; }
+    .ctrl-select {
+      border: 1px solid #e7e0d3;
+      background: #ffffff;
+      color: #44403c;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      max-width: 245px;
+    }
+    .ctrl-hint { font-size: 0.72rem; color: #78716c; }
+    .progress-track { position: fixed; bottom: 0; left: 0; width: 100%; height: 4px; background: #e7e0d3; z-index: 60; }
+    .progress-fill { height: 100%; width: 6.25%; background: linear-gradient(90deg, #ea580c, #16a34a); transition: width 0.2s ease; }
+  </style>
+</head>
+<body>
+
+  <main class="deck" id="deck">
+
+    <!-- SLIDE 01 -->
+    <section class="slide active" data-title="01. 封面總覽：記憶體管理核心命題">
+      <div class="slide-head">
+        <span class="badge">封面總覽 · 白話直覺 ＋ 專業架構</span>
+        <span class="slide-idx">01 / 16</span>
+      </div>
+      <div class="slide-body">
+        <div class="grid-split">
+          <div>
+            <h2>有限的 RAM，無限的程式：OS 如何管理記憶體？</h2>
+            <div class="analogy-bar"><strong>💡 白話比喻</strong>：<strong>硬碟是大書櫃</strong>（容量大但拿取慢），<strong>RAM 是書桌桌面</strong>（空間有限但隨手能翻），而 <strong>CPU 就是正在讀書的你</strong>——書必須放上書桌才能閱讀與修改！</div>
+            <div class="grid-3">
+              <div class="bento-card">
+                <h3>1. 隔離與保護 (Protection)</h3>
+                <p>CPU 僅能直接存取 Registers 與 Main Memory（Cache 居間緩衝）。多工時須防止程式越界讀寫其他行程或 OS 核心。</p>
+              </div>
+              <div class="bento-card green">
+                <h3>2. 空間效率 (Utilization)</h3>
+                <p>避免「外部斷裂（External Fragmentation）」與「內部斷裂（Internal Fragmentation）」浪費寶貴實體 RAM。</p>
+              </div>
+              <div class="bento-card pink">
+                <h3>3. 位址虛擬化 (Virtualization)</h3>
+                <p>將程式邏輯位址與實體 RAM 解耦，透過 Demand Paging 與 TLB 兼顧大空間與高速存取。</p>
+              </div>
+            </div>
+          </div>
+          <div class="inline-sticker"><img src="assets/2811CFAF-EB2B-43CF-A63B-094EEF4BC53C.jpeg" alt="橘子倉鼠圖貼" /></div>
+        </div>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：第一支程式放上書桌時，硬體與 OS 如何畫出「安全圍欄」並決定它的真實位置？</span>
+        <span>來源：[[virtual-memory-and-paging]] · [[Silberschatz2013-OS-Ch06-Memory]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 02 -->
+    <section class="slide" data-title="02. Base/Limit、MMU 與 Address Binding">
+      <div class="slide-head">
+        <span class="badge">Ch 06 · 硬體保護與位址綁定</span>
+        <span class="slide-idx">02 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>畫出安全圍欄：Base/Limit Registers、MMU 與位址綁定</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：給每本書記住「<strong>起點門牌 (Base)</strong>」與「<strong>可用寬度 (Limit)</strong>」，再用門房翻譯官（<strong>MMU</strong>）把程式以為的「我的第 10 頁」翻譯成書桌真實座標。</div>
+        <div class="grid-2">
+          <div class="bento-card">
+            <h3>專業機制 1：硬體位址保護</h3>
+            <p>User Mode 下每次記憶體存取，CPU 硬體皆即時驗證範圍，若越界立刻觸發 <strong>Trap（Addressing Error）</strong>交由 OS 終止行程：</p>
+            <div class="formula-box orange" style="margin-top:5px;">
+              <math display="block"><mtext>base</mtext><mo>≤</mo><mtext>address</mtext><mo>&lt;</mo><mtext>base</mtext><mo>+</mo><mtext>limit</mtext></math>
+            </div>
+          </div>
+          <div class="bento-card green">
+            <h3>專業機制 2：Logical vs. Physical &amp; MMU</h3>
+            <p>CPU 產生 <strong>Logical（Virtual）Address</strong>；執行期間由 <strong>MMU（Memory-Management Unit）</strong> 將其加上 <strong>Relocation Register</strong>，動態映射為記憶體單元看到的 <strong>Physical Address</strong>。</p>
+          </div>
+        </div>
+        <div class="bento-card neutral">
+          <h3>三種 Address Binding（位址綁定）時機</h3>
+          <ul>
+            <li><strong>Compile Time</strong>：編譯時已知實體位置，直接產生 Absolute Code（若位置變動須重新編譯）。</li>
+            <li><strong>Load Time</strong>：編譯時未知位置，須產生 Relocatable Code，於載入記憶體時綁定；兩者中 Logical = Physical Address。</li>
+            <li><strong>Execution Time</strong>：綁定延後至執行期（現代 OS 主流），允許行程在執行中搬移位置，需 MMU 硬體支援。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：多支大小不一的程式在書桌上搬進搬出後，桌面空間會發生什麼結構問題？</span>
+        <span>來源：[[Silberschatz2013-OS-Ch06-Memory]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 03 -->
+    <section class="slide has-corner-sticker" data-title="03. Swapping、連續配置與 50-Percent Rule">
+      <div class="slide-head">
+        <span class="badge">Ch 06 · 連續配置與斷裂</span>
+        <span class="slide-idx">03 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>連續配置（Contiguous Allocation）與 50-Percent Rule</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：早期規定每本書必須「一整本連在一起」放桌上；舊書收走後留下的零碎空洞（Hole）常塞不進新書，就像瑞士起司一樣滿是孔洞。</div>
+        <div class="formula-box pink">
+          <div class="formula-label">First-Fit 統計分析：50-Percent Rule（外部斷裂空間浪費）</div>
+          <math display="block">
+            <mtext>Unusable Memory Ratio</mtext><mo>=</mo>
+            <mfrac><mrow><mn>0.5</mn><mi>N</mi></mrow><mrow><mi>N</mi><mo>+</mo><mn>0.5</mn><mi>N</mi></mrow></mfrac>
+            <mo>=</mo><mfrac><mn>1</mn><mn>3</mn></mfrac>
+          </math>
+          <p style="font-size:0.75rem; color:#44403c; margin-top:3px;"><strong>專業解讀</strong>：在 Dynamic Storage-Allocation（First-Fit 找首個夠大空洞、Best-Fit 找最小夠大洞、Worst-Fit 最差）下，每配置 <math><mi>N</mi></math> 塊就會產生 <math><mn>0.5</mn><mi>N</mi></math> 個無法利用的碎洞，約 <strong>1/3 記憶體</strong>浪費！</p>
+        </div>
+        <div class="grid-2">
+          <div class="bento-card">
+            <h3>⚠️ External vs. Internal Fragmentation</h3>
+            <p><strong>External</strong>：總可用空間足夠但不連續，須靠 Dynamic Relocation + Compaction（壓實搬移）合併；<strong>Internal</strong>：配置區塊略大於實際需求（固定分區內未用空間）。</p>
+          </div>
+          <div class="bento-card neutral">
+            <h3>Swapping（換頁搬移）的時間代價</h3>
+            <p>將 100 MB 行程以 50 MB/s 磁碟 Swap Out（2,000 ms）再 Swap In（2,000 ms），單次 Context Switch 的 Swapping 開銷高達 <strong>4,000 ms（4 秒）</strong>，極度緩慢。</p>
+          </div>
+        </div>
+      </div>
+      <div class="corner-sticker"><img src="assets/A5308558-B20D-4FE2-81E6-15BA8A53D6DB.jpeg" alt="餅乾倉鼠圖貼" /></div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：既然「整塊連續」容易碎掉，改依程式功能拆成「分段」存放能徹底解決嗎？</span>
+        <span>來源：[[Silberschatz2013-OS-Ch06-Memory]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 04 -->
+    <section class="slide" data-title="04. Segmentation 與跨版本演進">
+      <div class="slide-head">
+        <span class="badge">Ch 06 · 分段架構與教材演進</span>
+        <span class="slide-idx">04 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>Segmentation（分段）與跨版本演進（9th vs. 10th Ed.）</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：把書拆成「正文、表格、附錄」分開找位子放，雖然比整本靈活，但因為每段長短依然不同，用久了桌上還是會留下碎洞！</div>
+        <div class="grid-2">
+          <div class="bento-card">
+            <h3>專業架構：Segment Table 與保護位元</h3>
+            <ul>
+              <li>邏輯位址為雙元組 <code>&lt;segment-number s, offset d&gt;</code>，由 <strong>STBR</strong>（表起點）與 <strong>STLR</strong>（段數量）檢查合法性（<math><mi>s</mi><mo>&lt;</mo><mtext>STLR</mtext></math> 且 <math><mi>d</mi><mo>&lt;</mo><mtext>limit</mtext></math>）。</li>
+              <li>每筆記錄 <code>(base, limit)</code> 與 Valid Bit、Read/Write/Execute 權限，支援以邏輯段為單位的程式碼共享。</li>
+              <li><strong>🔑 致命限制</strong>：段長不一使配置仍屬動態配置問題，<strong>External Fragmentation 依然存在</strong>。</li>
+            </ul>
+          </div>
+          <div class="bento-card pink">
+            <h3>⚠️ 教材重大演進：9th (2013) → 10th Ed. (2018)</h3>
+            <ul>
+              <li><strong>9th Ed.（[[Silberschatz2013-OS-Ch06-Memory]]）</strong>：獨立講授 Segmentation 與整支 Process Swapping。</li>
+              <li><strong>10th Ed.（[[Silberschatz2018-OS-10thEd]]）</strong>：因現代 64-bit 系統全面採平坦定址，<strong>正式移除 Segmentation 專節</strong>，並將 Swapping 改為現代 OS 實務的 <strong>Page Swapping</strong>，補充 ARMv8 64-bit 架構。</li>
+            </ul>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>記憶體配置策略</th><th>切分粒度</th><th>外部斷裂</th><th>內部斷裂</th><th>現代 64-bit OS 採用現況</th></tr></thead>
+          <tbody>
+            <tr><td>Contiguous Allocation</td><td>整支程式單一連續區</td><td>嚴重（~1/3 浪費）</td><td>無（動態分區）</td><td>淘汰</td></tr>
+            <tr><td>Segmentation</td><td>依邏輯功能分段（變動長度）</td><td>依然存在</td><td>無</td><td>10th Ed. 已淘汰</td></tr>
+            <tr><td><strong>Paging（分頁）</strong></td><td>固定大小 Frames / Pages</td><td><strong>完全消除 (0)</strong></td><td>僅最後一頁（平均半頁）</td><td><strong>現代作業系統主流</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：把空間切成「大小完全一致的小格子（Paging）」，位址究竟怎麼翻譯？</span>
+        <span>來源：[[os-9thed-vs-10thed-evolution]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 05 -->
+    <section class="slide" data-title="05. Paging 核心原理與斷裂精算">
+      <div class="slide-head">
+        <span class="badge green">Ch 06 · Paging 硬體翻譯與計算</span>
+        <span class="slide-idx">05 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>Paging（分頁）：用活頁紙機制徹底消滅外部斷裂</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：把書拆成等大的「活頁紙（<strong>Pages</strong>）」，書桌畫成同大的方格（<strong>Frames</strong>），靠目錄清單（<strong>Page Table</strong>）記錄「第幾頁放第幾格」，就能打散存放！</div>
+        <div class="grid-2">
+          <div class="bento-card green">
+            <h3>專業機制：位址切分與硬體翻譯</h3>
+            <ul>
+              <li>實體記憶體切為固定大小 <strong>Frames</strong>，邏輯記憶體切為同大 <strong>Pages</strong>（2 的冪次，常見 512 B 至 16 MB）。</li>
+              <li>若邏輯位址空間 <math><msup><mn>2</mn><mi>m</mi></msup></math>、Page Size <math><msup><mn>2</mn><mi>n</mi></msup></math>：高 <math><mi>m</mi><mo>−</mo><mi>n</mi></math> bits 為 <strong>Page Number (<math><mi>p</mi></math>)</strong>，低 <math><mi>n</mi></math> bits 為 <strong>Page Offset (<math><mi>d</mi></math>)</strong>。</li>
+              <li>MMU 以 <math><mi>p</mi></math> 查詢由 <strong>PTBR</strong> 指向的 Page Table 取得 Frame Number <math><mi>f</mi></math>，再拼上 <math><mi>d</mi></math> 成為實體位址。</li>
+            </ul>
+          </div>
+          <div class="bento-card">
+            <h3>🔑 斷裂精算與 Shared Pages</h3>
+            <ul>
+              <li><strong>External Fragmentation = 0</strong>：任何 Free Frame 皆可配給任何行程（OS 以 Free-Frame List 追蹤）。</li>
+              <li><strong>Internal Fragmentation 算例</strong>：若 Page Size = 2,048 B、Process = 72,766 B = 35 pages + 1,086 B，最後一頁浪費 <math><mn>2,048</mn><mo>−</mo><mn>1,086</mn><mo>=</mo><mn>962</mn><mtext> B</mtext></math>（平均浪費 <math><mfrac><mn>1</mn><mn>2</mn></mfrac></math> Page）。</li>
+              <li><strong>Shared Pages</strong>：唯讀可重入程式碼（Reentrant Code，如編譯器）可讓多個行程 Page Table 指向同一實體 Frame。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：Page Table 放在主記憶體裡，代表每次讀寫都要「先查表、再讀資料」慢兩倍，怎麼加速？</span>
+        <span>來源：[[Silberschatz2013-OS-Ch06-Memory]] · [[virtual-memory-and-paging]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 06 -->
+    <section class="slide" data-title="06. TLB 加速與 Effective Access Time">
+      <div class="slide-head">
+        <span class="badge green">Ch 06 · TLB 與有效存取時間</span>
+        <span class="slide-idx">06 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>TLB 硬體快取與 Effective Access Time (EAT) 推導</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：在書桌角貼一張「速查便利貼（<strong>TLB</strong>）」，記住最近常翻的那幾頁在第幾格；99% 瞄一眼便利貼就找到，不必每次翻厚重的目錄清單！</div>
+        <div class="grid-split">
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="bento-card">
+              <h3>專業架構：Associative Memory &amp; ASIDs</h3>
+              <p><strong>TLB（Translation Look-aside Buffer）</strong> 是 64–1,024 entries 的平行搜尋關聯式快取。若 TLB 支援儲存 <strong>ASID（Address-Space Identifier）</strong>，便能在 Context Switch 時保護位址空間而無須清空（Flush）整個 TLB。</p>
+            </div>
+            <div class="formula-box">
+              <div class="formula-label">TLB 有效存取時間（RAM 存取 <math><mi>m</mi><mo>=</mo><mn>100</mn><mtext> ns</mtext></math>，TLB 搜尋 <math><mi>ϵ</mi><mo>=</mo><mn>20</mn><mtext> ns</mtext></math>，命中率 <math><mi>α</mi></math>）</div>
+              <math display="block">
+                <mtext>EAT</mtext><mo>=</mo>
+                <mo>(</mo><mi>m</mi><mo>+</mo><mi>ϵ</mi><mo>)</mo><mi>α</mi><mo>+</mo>
+                <mo>(</mo><mn>2</mn><mi>m</mi><mo>+</mo><mi>ϵ</mi><mo>)</mo><mo>(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo>)</mo>
+              </math>
+              <p style="font-size:0.75rem; color:#44403c; margin-top:3px;"><strong>數值對比</strong>：命中（機率 <math><mi>α</mi></math>）只讀 1 次 RAM；TLB Miss（機率 <math><mn>1</mn><mo>−</mo><mi>α</mi></math>）須讀 Page Table＋資料共 2 次 RAM。當 <math><mi>α</mi><mo>=</mo><mn>80</mn><mo>%</mo></math> 時 <math><mtext>EAT</mtext><mo>=</mo><mn>140</mn><mtext> ns</mtext></math>；當 <math><mi>α</mi><mo>=</mo><mn>99</mn><mo>%</mo></math> 時降至 <strong>121 ns</strong>！</p>
+            </div>
+          </div>
+          <div class="inline-sticker"><img src="assets/4F4E807E-05CE-4289-B1DC-C64E8077071F.jpeg" alt="嫩葉倉鼠圖貼" /></div>
+        </div>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：64-bit 位址空間大到單一張 Page Table 就佔好幾 GB，該用什麼資料結構瘦身？</span>
+        <span>來源：[[virtual-memory-and-paging]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 07 -->
+    <section class="slide" data-title="07. 大型 Page Table 的三種瘦身結構">
+      <div class="slide-head">
+        <span class="badge">Ch 06 · 64-bit Page Table 結構</span>
+        <span class="slide-idx">07 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>大型 Page Table 瘦身術：Hierarchical、Hashed 與 Inverted</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：目錄厚到書桌放不下時，可以「先印總目錄再分章節目錄」、「用頁碼直接算雜湊櫃號」或「全書桌只寫一張格子分配表」。</div>
+        <div class="bento-card neutral">
+          <p><strong>為什麼單層 Page Table 會爆炸？</strong> 32-bit 位址搭 4 KB (<math><msup><mn>2</mn><mn>12</mn></msup></math>) 頁需要 <math><msup><mn>2</mn><mn>20</mn></msup><mo>≈</mo><mn>100</mn><mtext> 萬筆</mtext></math>（約 4 MB 連續空間）；而 64-bit 位址空間更達 <math><msup><mn>2</mn><mn>52</mn></msup></math> 筆，完全無法一次塞進實體 RAM。</p>
+        </div>
+        <table>
+          <thead><tr><th>Page Table 結構</th><th>專業運作機制</th><th>空間優勢</th><th>查詢代價與限制</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Hierarchical Paging</strong><br/>（多層分頁表）</td><td>將 Page Table 本身再分頁（如 2-Level <code>p1+p2+d</code> 或 3-Level <code>32+10+10+12</code> bits），採 Forward-mapped 樹狀索引</td><td>未使用的稀疏位址區段無須配置內層表</td><td>64-bit 若分 4 層，TLB Miss 時須 <strong>4 次記憶體存取</strong></td></tr>
+            <tr><td><strong>Hashed Page Tables</strong><br/>（雜湊分頁表）</td><td>常見於 &gt;32-bit 空間：將 Virtual Page Number 經 Hash Function 對應至 Bucket，沿 Linked-list 比對 <code>(VPN, Frame, Next)</code></td><td>表大小只與實際使用的頁面數量成正比；Clustered 變體每筆管 16 頁</td><td>發生 Hash Collision 時須走訪串鏈</td></tr>
+            <tr><td><strong>Inverted Page Table</strong><br/>（反向分頁表）</td><td>全系統僅維護一張表，<strong>每個實體 Frame 對應一筆</strong> <code>&lt;pid, p&gt;</code>，以實體位置反查擁有者</td><td>極度節省記憶體（不隨行程數量膨脹）</td><td>須靠 Hash + TLB 加速搜尋；跨行程共享記憶體映射較困難</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：到目前為止都假設「整支程式要全部搬進 RAM 才能跑」，如果程式比實體 RAM 還大呢？</span>
+        <span>來源：[[Silberschatz2013-OS-Ch06-Memory]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 08 -->
+    <section class="slide has-corner-sticker" data-title="08. Virtual Memory 的誕生與空間佈局">
+      <div class="slide-head">
+        <span class="badge green">Ch 07 · Virtual Memory 誕生</span>
+        <span class="slide-idx">08 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>Virtual Memory（虛擬記憶體）：邏輯與實體徹底解耦</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：看 1,000 頁百科全書時，同時只會翻開其中 3 頁；另外 997 頁（例如「冷門錯誤處理說明書」）根本可以先留在書櫃（硬碟）！</div>
+        <div class="grid-3">
+          <div class="bento-card green">
+            <h3>1. 突破實體 RAM 上限</h3>
+            <p>允許執行「部分載入（Partially-loaded）」的程式，Logical Address Space 可遠大於 Physical Memory。</p>
+          </div>
+          <div class="bento-card">
+            <h3>2. 提升並行度與效率</h3>
+            <p>每支行程只佔少數 Frames，RAM 可同時容納更多行程，減少 Swapping 與無謂 I/O，加速 <code>fork()</code> 建立。</p>
+          </div>
+          <div class="bento-card pink">
+            <h3>3. Sparse Address Space</h3>
+            <p><code>Code/Data</code> 在底、<code>Heap</code> 向上長、<code>Stack</code> 向下長，中間保留廣大 Hole 供動態成長與共享函式庫映射。</p>
+          </div>
+        </div>
+        <div class="bento-card neutral">
+          <h3>實作途徑與核心概念</h3>
+          <p>Virtual Memory 可透過 <strong>Demand Paging</strong>（主流）或 Demand Segmentation 實作；唯有實際被執行或存取到的程式碼區段才會真正佔用實體頁框。</p>
+        </div>
+      </div>
+      <div class="corner-sticker"><img src="assets/2811CFAF-EB2B-43CF-A63B-094EEF4BC53C.jpeg" alt="橘子倉鼠圖貼" /></div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：既然只載入部分頁面，硬體怎麼知道「要讀的那一頁到底在 RAM 裡，還是還在硬碟裡」？</span>
+        <span>來源：[[Silberschatz2013-OS-Ch07-VirtualMemory]] · [[virtual-memory-and-paging]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 09 -->
+    <section class="slide" data-title="09. Demand Paging 與 Page Fault 處理流程">
+      <div class="slide-head">
+        <span class="badge green">Ch 07 · Demand Paging</span>
+        <span class="slide-idx">09 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>Demand Paging（需求分頁）與 Page Fault 處理 6 步驟</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：像餐廳「點菜才上菜（Lazy Swapper）」！目錄每頁旁畫一個勾：<code>v</code> 代表已在書桌上，<code>i</code> 代表還在書櫃——摸到 <code>i</code> 就請 OS 去書櫃拿！</div>
+        <div class="grid-2">
+          <div class="bento-card green">
+            <h3>專業機制：Pager &amp; Valid-Invalid Bit</h3>
+            <ul>
+              <li><strong>Lazy Swapper (Pager)</strong>：以 Page 為單位（非整支行程），沒用到絕不搬入記憶體；Extreme Case 為 Pure Demand Paging（從 0 頁開始執行）。</li>
+              <li><strong>Valid-Invalid Bit</strong>：Page Table 每列附加狀態位元：<code>v</code>（Memory Resident，已在 RAM）vs. <code>i</code>（Not-in-memory 或非法存取）。</li>
+              <li><strong>硬體需求</strong>：Page Table（含 v/i bit）、Secondary Memory（Swap Space）與 <strong>Instruction Restart</strong>。</li>
+            </ul>
+          </div>
+          <div class="bento-card">
+            <h3>Page Fault 發生時的 6 步 OS 救援</h3>
+            <ul>
+              <li>1. 存取標記為 <code>i</code> 的頁面 → 觸發 <strong>Page Fault Trap</strong> 給 OS。</li>
+              <li>2. OS 查內部表確認：非法位址則 Abort；合法則僅是不在 RAM。</li>
+              <li>3. 從 Free-Frame List 取得一個空 Frame。</li>
+              <li>4. 排程 Disk Read 將該頁從 Backing Store 讀入空 Frame。</li>
+              <li>5. 更新 Page Table 框號並將驗證位元改為 <code>v</code>。</li>
+              <li>6. <strong>Restart 被中斷的指令</strong>（如 <code>load M</code>），程式無縫繼續！</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：每次 Page Fault 都要去讀慢如蝸牛的硬碟，對整體系統速度的殺傷力有多大？</span>
+        <span>來源：[[Silberschatz2013-OS-Ch07-VirtualMemory]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 10 -->
+    <section class="slide" data-title="10. Page Fault 效能雪崩與局部性原理">
+      <div class="slide-head">
+        <span class="badge pink">Ch 07 · EAT 與局部性救星</span>
+        <span class="slide-idx">10 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>Page Fault 的效能雪崩：千分之一錯失＝慢 40 倍！</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：書桌拿資料只要 200 奈秒，跑去書櫃拿要 8 毫秒（慢 <strong>40,000 倍</strong>！就像書桌拿筆 1 秒 vs. 坐飛機出國拿筆 11 小時）。</div>
+        <div class="grid-split">
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="formula-box pink">
+              <div class="formula-label">Demand Paging 有效存取時間（RAM <math><mn>200</mn><mtext> ns</mtext></math>，Page Fault 服務 <math><mn>8</mn><mtext> ms</mtext><mo>=</mo><mn>8,000,000</mn><mtext> ns</mtext></math>，缺頁率 <math><mn>0</mn><mo>≤</mo><mi>p</mi><mo>≤</mo><mn>1</mn></math>）</div>
+              <math display="block">
+                <mtext>EAT</mtext><mo>=</mo><mo>(</mo><mn>1</mn><mo>−</mo><mi>p</mi><mo>)</mo><mo>×</mo><mn>200</mn><mo>+</mo><mi>p</mi><mo>×</mo><mn>8,000,000</mn><mo>=</mo><mn>200</mn><mo>+</mo><mn>7,999,800</mn><mi>p</mi>
+              </math>
+            </div>
+            <div class="grid-2">
+              <div class="bento-card pink">
+                <div class="kpi">慢 40 倍！</div>
+                <p>若每 1,000 次存取發生 1 次 Page Fault（<math><mi>p</mi><mo>=</mo><mn>0.001</mn></math>），<math><mtext>EAT</mtext><mo>=</mo><mn>8,199.8</mn><mtext> ns</mtext><mo>≈</mo><mn>8.2</mn><mtext> μs</mtext></math>。若要效能衰退 &lt; 10%（<math><mo>&lt;</mo><mn>220</mn><mtext> ns</mtext></math>），須 <math><mi>p</mi><mo>&lt;</mo><mn>0.0000025</mn></math>（40 萬次少於 1 次）。</p>
+              </div>
+              <div class="bento-card green">
+                <h3>🔑 為什麼實務上還能跑得飛快？</h3>
+                <p>仰賴 <strong>Locality of Reference（參考局部性）</strong>：程式在時間與空間上高度集中存取相鄰頁面，使實際 <math><mi>p</mi></math> 極接近 0。</p>
+              </div>
+            </div>
+          </div>
+          <div class="inline-sticker"><img src="assets/A5308558-B20D-4FE2-81E6-15BA8A53D6DB.jpeg" alt="餅乾倉鼠圖貼" /></div>
+        </div>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：搬動頁面這麼昂貴，呼叫 fork() 建立子行程時一定要整份複製記憶體嗎？</span>
+        <span>來源：[[virtual-memory-and-paging]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 11 -->
+    <section class="slide" data-title="11. Copy-on-Write (COW) 零拷貝">
+      <div class="slide-head">
+        <span class="badge green">Ch 07 · Copy-on-Write</span>
+        <span class="slide-idx">11 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>Copy-on-Write (COW)：先共用，真的要改再影印！</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：爸爸開分身（<code>fork()</code>）時，先讓父子合看書桌上同一疊活頁紙；只有當某一方真的拿筆「塗改」某一頁時，才立刻影印那一頁給他！</div>
+        <div class="grid-2">
+          <div class="bento-card green">
+            <h3>專業流程 1：fork() 當下共享唯讀頁</h3>
+            <p>傳統 <code>fork()</code> 複製整份記憶體，但子行程常緊接呼叫 <code>exec()</code> 覆寫空間而浪費。COW 讓父子行程的 Page Table 指向同一組實體 Frames（如 Page A, B, C）並標為 Copy-on-Write，瞬間完成行程建立。</p>
+          </div>
+          <div class="bento-card">
+            <h3>專業流程 2：寫入觸發複製與 vfork()</h3>
+            <p>當 Process 1 嘗試修改 Page C 時，硬體觸發保護例外，OS 從 Free-Frame Pool 配置新框並複製出「Copy of Page C」供其修改；<code>vfork()</code> 則讓父行程暫停、子行程共用位址空間直到 <code>exec()</code>。</p>
+          </div>
+        </div>
+        <div class="bento-card neutral">
+          <h3>🔒 安全與記憶體衛生：Zero-Fill-on-Demand</h3>
+          <p>Free Frames 在配置給新行程使用前會先清零（Zero-out），防止新程式讀取到先前已終止行程留下的敏感記憶體殘留。</p>
+        </div>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：當實體 RAM 全部佔滿、沒有任何 Free Frame 時發生 Page Fault，OS 該踢掉哪一頁？</span>
+        <span>來源：[[Silberschatz2013-OS-Ch07-VirtualMemory]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 12 -->
+    <section class="slide" data-title="12. Page Replacement 三大經典演算法">
+      <div class="slide-head">
+        <span class="badge pink">Ch 07 · Page Replacement</span>
+        <span class="slide-idx">12 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>Page Replacement：Dirty Bit 與 FIFO / OPT / LRU 演算法比較</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：書桌滿了要收走一頁前，先看有沒有塗改過（沒改過直接蓋掉！）；再比比看「最早放上桌」、「會算命」和「最久沒翻」誰最省力。</div>
+        <div class="bento-card neutral">
+          <p><strong>Modify (Dirty) Bit 減半 I/O</strong>：替換 Victim Frame 時，若該頁未被修改（Dirty = 0）則無須寫回磁碟、直接覆寫；僅 Dirty = 1 才須兩次頁面傳輸（寫出＋讀入）。以下以字串 <code>7,0,1,2,0,3,0,4,2,3,0,3,2,1,2,0,1,7,0,1</code>（3 Frames）評測：</p>
+        </div>
+        <table>
+          <thead><tr><th>演算法</th><th>挑 Victim 規則</th><th>Page Faults</th><th>專業特性與優缺點</th></tr></thead>
+          <tbody>
+            <tr><td><strong>FIFO</strong>（先進先出）</td><td>最早進入 RAM 的頁面</td><td><strong>15 次</strong></td><td>實作簡單（FIFO Queue），但存在 <strong>Belady's Anomaly</strong></td></tr>
+            <tr><td><strong>Optimal (OPT)</strong></td><td>未來最久不會被用到的頁面</td><td><strong>9 次</strong></td><td>理論最佳下界基準，但 OS 無法預知未來，無法實作</td></tr>
+            <tr><td><strong>LRU</strong>（最近最少使用）</td><td>過去最久未被存取的頁面</td><td><strong>12 次</strong></td><td>效果佳且屬 Stack Algorithm（無異常），但 Counter / 雙向鏈表維護成本高</td></tr>
+          </tbody>
+        </table>
+        <div class="bento-card pink">
+          <h3>⚠️ 什麼是 Belady's Anomaly（貝萊迪異常）？</h3>
+          <p>在 FIFO 下對特定字串（如 <code>1,2,3,4,1,2,5,1,2,3,4,5</code>），增加實體 Frame 數（3 → 4 格）反而導致 Page Fault 次數上升！OPT 與 LRU 因具包含性質（Stack Algorithms）絕不發生此異常。</p>
+        </div>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：精確 LRU 硬體開銷太大，實務上 OS 怎麼用 1 個位元低成本近似它？</span>
+        <span>來源：[[Silberschatz2013-OS-Ch07-VirtualMemory]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 13 -->
+    <section class="slide has-corner-sticker" data-title="13. Clock 近似與 Enhanced Second-Chance">
+      <div class="slide-head">
+        <span class="badge">Ch 07 · 實務近似置換策略</span>
+        <span class="slide-idx">13 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>實務近似演算法：Second-Chance (Clock) 與 Counting</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：把桌上的頁排成圓圈貼「剛看過 <code>1</code>」的貼紙；時鐘指標看到 <code>1</code> 就撕掉改 <code>0</code> 給第二次機會，看到 <code>0</code> 代表很久沒理它，直接收走！</div>
+        <div class="grid-2">
+          <div class="bento-card">
+            <h3>Second-Chance (Clock) 演算法</h3>
+            <ul>
+              <li>硬體為每頁提供 1 個 <strong>Reference Bit</strong>（被存取即設為 <code>1</code>）。</li>
+              <li>指標掃描環狀佇列：若 Ref = <code>1</code>，將其清為 <code>0</code>（給第二次機會）並推進指標；若 Ref = <code>0</code>，立刻選為 Victim 替換。</li>
+            </ul>
+          </div>
+          <div class="bento-card green">
+            <h3>Enhanced Second-Chance（雙位元）</h3>
+            <p>綜合 <code>(Reference Bit, Modify Bit)</code> 決定 4 級淘汰優先序：<br/><code>(0,0)</code> 最佳（未用且乾淨）→ <code>(0,1)</code>（未用但須寫回）→ <code>(1,0)</code>（剛用但乾淨）→ <code>(1,1)</code> 最差（剛用且髒）。</p>
+          </div>
+        </div>
+        <div class="bento-card neutral">
+          <h3>Page Buffering 與 Counting 演算法</h3>
+          <p><strong>Page Buffering</strong> 預先維護 Free-Frame Pool 與 Modified List（空閒時寫回磁碟以維持乾淨）；<strong>Counting</strong> 則包含 LFU（踢參考次數最少者）與 MFU（實務極少採用）。</p>
+        </div>
+      </div>
+      <div class="corner-sticker"><img src="assets/4F4E807E-05CE-4289-B1DC-C64E8077071F.jpeg" alt="嫩葉倉鼠圖貼" /></div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：決定了「踢誰」，那 OS 一開始該分給每支行程多少個 Frames？分太少會發生什麼災難？</span>
+        <span>來源：[[Silberschatz2013-OS-Ch07-VirtualMemory]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 14 -->
+    <section class="slide" data-title="14. Frame Allocation 與 Thrashing 危機">
+      <div class="slide-head">
+        <span class="badge pink">Ch 07 · Frame Allocation &amp; Thrashing</span>
+        <span class="slide-idx">14 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>Frame Allocation 與 Thrashing（輾轉）系統危機</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：一次在書桌擺太多本書、每本只分 1 格，結果「剛把第 5 頁放回書櫃、下一秒又要拿第 5 頁」，全部時間都在跑書櫃、完全沒辦法讀書！</div>
+        <div class="grid-2">
+          <div class="bento-card">
+            <h3>Frame Allocation 與 Global / Local 策略</h3>
+            <p>除了均分（Equal），更常依行程大小 <math><msub><mi>S</mi><mi>i</mi></msub></math> 按比例分配總可用框數 <math><mi>m</mi></math>（<strong>Proportional Allocation</strong>，如 <math><mi>m</mi><mo>=</mo><mn>64</mn><mo>,</mo><msub><mi>S</mi><mn>1</mn></msub><mo>=</mo><mn>10</mn><mo>,</mo><msub><mi>S</mi><mn>2</mn></msub><mo>=</mo><mn>127</mn><mo>⇒</mo><msub><mi>a</mi><mn>1</mn></msub><mo>≈</mo><mn>5</mn><mo>,</mo><msub><mi>a</mi><mn>2</mn></msub><mo>≈</mo><mn>59</mn></math>）：</p>
+            <div class="formula-box orange" style="margin:5px 0;">
+              <math display="block"><msub><mi>a</mi><mi>i</mi></msub><mo>=</mo><mfrac><msub><mi>S</mi><mi>i</mi></msub><mrow><mo>∑</mo><msub><mi>S</mi><mi>j</mi></msub></mrow></mfrac><mo>×</mo><mi>m</mi></math>
+            </div>
+            <p><strong>Global Replacement</strong> 可從低優先權行程搶框（吞吐高但效能不穩）；<strong>Local</strong> 僅替換自身框。</p>
+          </div>
+          <div class="bento-card pink">
+            <h3>⚠️ Thrashing（輾轉）的惡性循環</h3>
+            <ul>
+              <li>當分配到的 Frames 少於行程 <strong>Locality</strong>（目前活躍工作集）所需大小，Page Fault 率急遽飆升。</li>
+              <li>行程忙著換頁（Swapping in &amp; out）導致 <strong>CPU 利用率驟降</strong>。</li>
+              <li>OS 排程器誤以為系統負載不足，反而<strong>提高 Degree of Multiprogramming</strong>（再加開新行程）→ 大家更缺框 → <strong>系統全面卡死</strong>！</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：OS 要如何透過 Locality 模型即時偵測 Thrashing 並提前踩煞車？</span>
+        <span>來源：[[virtual-memory-and-paging]] · [[Silberschatz2013-OS-Ch07-VirtualMemory]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 15 -->
+    <section class="slide" data-title="15. Working-Set、PFF 與核心記憶體配置">
+      <div class="slide-head">
+        <span class="badge green">Ch 07 · 防治 Thrashing 與 Kernel Memory</span>
+        <span class="slide-idx">15 / 16</span>
+      </div>
+      <div class="slide-body">
+        <h2>防治 Thrashing（Working-Set / PFF）與核心配置器</h2>
+        <div class="analogy-bar"><strong>💡 白話比喻</strong>：統計每本書最近常翻的幾頁，總和超過桌面格數就先請幾本書下桌休息；OS 核心自己拿空間則用「對半切夥伴」或「專用零件盤」。</div>
+        <div class="grid-2">
+          <div class="bento-card green">
+            <h3>防治 Thrashing：Working-Set &amp; PFF</h3>
+            <ul>
+              <li><strong>Working-Set Model</strong>：定義視窗 <math><mi>Δ</mi></math>（如 10,000 次參考）內的不重複頁面數為 <math><msub><mtext>WSS</mtext><mi>i</mi></msub></math>，總需求 <math><mi>D</mi><mo>=</mo><mo>∑</mo><msub><mtext>WSS</mtext><mi>i</mi></msub></math>。若 <math><mi>D</mi><mo>&gt;</mo><mi>m</mi></math>（實體框總數），OS 必須暫停或換出部分行程。</li>
+              <li><strong>Page-Fault Frequency (PFF)</strong>：搭 Local Replacement 設定可接受缺頁率上下界——高於上限加框、低於下限收框，比 <math><mi>Δ</mi></math> 追蹤更直接好實作。</li>
+            </ul>
+          </div>
+          <div class="bento-card">
+            <h3>Kernel Memory Allocators（核心專用配置）</h3>
+            <ul>
+              <li><strong>Buddy System</strong>：將實體連續頁按 <math><msup><mn>2</mn><mi>k</mi></msup></math> 對半切分（如 256 KB 拆成 128→64→32 KB 滿足 21 KB 請求），釋放時快速與相鄰夥伴（Buddy）合併，缺點仍有內部斷裂。</li>
+              <li><strong>Slab Allocator</strong>：為每個核心資料結構建立 Cache（內含物理連續頁構成的 Slabs 與預建物件），<strong>完全無內部斷裂</strong>且配置極快。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="bridge-foot">
+        <span class="bridge-q">下一頁思考：除了 OS 與硬體幫忙，寫程式時有什麼簡單習慣能少觸發 128 倍 Page Fault？</span>
+        <span>來源：[[Silberschatz2013-OS-Ch07-VirtualMemory]] · [[Silberschatz2018-OS-10thEd]]</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 16 -->
+    <section class="slide" data-title="16. 程式結構實戰與全章核心結論">
+      <div class="slide-head">
+        <span class="badge">總結 · 程式寫法、現代演進與 Key Takeaways</span>
+        <span class="slide-idx">16 / 16</span>
+      </div>
+      <div class="slide-body">
+        <div class="grid-split">
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <h2>迴圈方向差 128 倍！全章雙軌核心結論</h2>
+            <div class="analogy-bar" style="margin-bottom:0;"><strong>💡 白話實例</strong>：讀 <code>128 × 128</code> 表格（每橫列剛好放一頁），「直著跨列跳著讀」跑 <strong>16,384 趟</strong>書櫃；「順著橫列連續讀」只要 <strong>128 趟</strong>！</div>
+            <div class="bento-card pink">
+              <h3>專業實戰：Program Structure &amp; TLB Reach</h3>
+              <p>假設 <code>int data[128][128]</code> 以 Row-major 儲存且每列佔 1 Page：外層掃 <code>j</code>（Column-major）產生 <math><mn>128</mn><mo>×</mo><mn>128</mn><mo>=</mo><mn>16,384</mn></math> 次 Page Fault；改為外層掃 <code>i</code>（Row-major）僅需 <strong>128 次</strong>！另可透過 <strong>Multiple Page Sizes</strong> 擴大 <math><mtext>TLB Reach</mtext><mo>=</mo><mtext>TLB Size</mtext><mo>×</mo><mtext>Page Size</mtext></math>，並以 I/O Interlock 鎖定 DMA 緩衝頁。</p>
+            </div>
+            <div class="bento-card green">
+              <h3>🔑 四大核心結論（Key Takeaways）</h3>
+              <ul>
+                <li><strong>隔離與綁定</strong>：Base/Limit 與 MMU 在 Execution Time 分離邏輯與實體位址。</li>
+                <li><strong>分頁與 TLB</strong>：Paging 徹底消滅外部斷裂；99% 命中率的 TLB 把兩倍查表拉回 121 ns。</li>
+                <li><strong>虛擬記憶體</strong>：Demand Paging + COW + Clock + Working-Set 兼顧大空間與防 Thrashing。</li>
+                <li><strong>10th Ed. 演進</strong>：正式淘汰 Segmentation，轉向 NUMA、Compressed Memory 與雲端虛擬化。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="inline-sticker"><img src="assets/2811CFAF-EB2B-43CF-A63B-094EEF4BC53C.jpeg" alt="橘子倉鼠圖貼" /></div>
+        </div>
+      </div>
+      <div class="bridge-foot">
+        <span>完成單元：OS 記憶體管理與虛擬記憶體入門（白話＋專業雙軌版）</span>
+        <span>16 / 16</span>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="controls" aria-label="投影片控制列">
+    <button class="ctrl-btn" id="prevBtn" type="button">← 上一頁</button>
+    <select class="ctrl-select" id="slideSelect" aria-label="跳至指定投影片"></select>
+    <button class="ctrl-btn" id="nextBtn" type="button">下一頁 →</button>
+    <span class="ctrl-hint" id="pageIndicator">1 / 16</span>
+  </nav>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const slideSelect = document.getElementById("slideSelect");
+    const pageIndicator = document.getElementById("pageIndicator");
+    const progressFill = document.getElementById("progressFill");
+    let current = 0;
+
+    slides.forEach((s, i) => {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = s.dataset.title || `Slide ${i + 1}`;
+      slideSelect.appendChild(opt);
+    });
+
+    function goTo(index) {
+      current = Math.max(0, Math.min(slides.length - 1, index));
+      slides.forEach((s, i) => s.classList.toggle("active", i === current));
+      slideSelect.value = String(current);
+      pageIndicator.textContent = `${current + 1} / ${slides.length}`;
+      progressFill.style.width = `${(((current + 1) / slides.length) * 100).toFixed(2)}%`;
+    }
+
+    prevBtn.addEventListener("click", () => goTo(current - 1));
+    nextBtn.addEventListener("click", () => goTo(current + 1));
+    slideSelect.addEventListener("change", (e) => goTo(Number(e.target.value)));
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
+        e.preventDefault();
+        goTo(current + 1);
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        goTo(current - 1);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        goTo(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        goTo(slides.length - 1);
+      }
+    });
+  </script>
+</body>
+</html>
